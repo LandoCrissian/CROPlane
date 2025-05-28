@@ -102,5 +102,93 @@
     });
   </script>
 
+  <script>
+  const multiplierDisplay = document.getElementById('multiplierDisplay');
+  const multiplierStat = document.getElementById('multiplier');
+  const placeBetBtn = document.getElementById('placeBet');
+  const cashoutBtn = document.getElementById('cashout');
+  const betInput = document.getElementById('betAmount');
+  const autoInput = document.getElementById('autoCashout');
+  const balanceDisplay = document.getElementById('balance');
+  const profitDisplay = document.getElementById('profit');
+
+  let balance = 1000;
+  let bet = 0;
+  let profit = 0;
+  let multiplier = 1.00;
+  let autoCashout = 0;
+  let running = false;
+  let gameLoop;
+
+  function updateUI() {
+    multiplierDisplay.textContent = multiplier.toFixed(2) + 'x';
+    multiplierStat.textContent = multiplier.toFixed(2) + 'x';
+    balanceDisplay.textContent = balance.toFixed(2) + ' CRO';
+    profitDisplay.textContent = profit.toFixed(2) + ' CRO';
+  }
+
+  function crash() {
+    clearInterval(gameLoop);
+    profit = -bet;
+    updateUI();
+    setTimeout(reset, 2000);
+  }
+
+  function reset() {
+    multiplier = 1.00;
+    bet = 0;
+    profit = 0;
+    running = false;
+    updateUI();
+    placeBetBtn.disabled = false;
+    cashoutBtn.disabled = true;
+    cashoutBtn.classList.add('opacity-50');
+  }
+
+  function startGame() {
+    bet = parseFloat(betInput.value) || 0;
+    autoCashout = parseFloat(autoInput.value) || 0;
+
+    if (bet <= 0 || bet > balance) return;
+
+    balance -= bet;
+    profit = 0;
+    multiplier = 1.00;
+    running = true;
+    updateUI();
+
+    placeBetBtn.disabled = true;
+    cashoutBtn.disabled = false;
+    cashoutBtn.classList.remove('opacity-50');
+
+    gameLoop = setInterval(() => {
+      multiplier += 0.01;
+      updateUI();
+
+      if (autoCashout > 0 && multiplier >= autoCashout) {
+        eject();
+      }
+
+      if (Math.random() < 0.01) {
+        crash();
+      }
+    }, 50);
+  }
+
+  function eject() {
+    if (!running) return;
+    clearInterval(gameLoop);
+    running = false;
+
+    profit = bet * multiplier;
+    balance += profit;
+    updateUI();
+    setTimeout(reset, 2000);
+  }
+
+  placeBetBtn.addEventListener('click', startGame);
+  cashoutBtn.addEventListener('click', eject);
+</script>
+
 </body>
 </html>
