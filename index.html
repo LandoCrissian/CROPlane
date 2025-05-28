@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>CROPLANE | Sky high stakes. Mid-air exits.</title>
+  <title>CROPLANE | E3 Cinematic Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Orbitron', sans-serif;
-      background: linear-gradient(to bottom, #000B2F, #001F3F);
+      background: black;
+      margin: 0;
     }
     .glow {
       text-shadow: 0 0 8px #00eaff, 0 0 16px #00eaff;
@@ -30,104 +31,105 @@
 </head>
 
 <body class="text-white overflow-hidden">
+<canvas id="gameCanvas" style="position: fixed; top: 0; left: 0; z-index: 0;"></canvas>
 
-<div id="hero" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black text-center">
-  <h1 class="text-6xl font-bold text-blue-400 glow mb-4">CROPLANE</h1>
-  <p class="text-xl text-blue-300 mb-8">Sky high stakes. Mid-air exits.</p>
-  <button id="enterGame" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
-    Enter Flight
-  </button>
+<div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-10 text-center">
+  <h1 class="text-4xl font-bold text-cyan-400 glow" id="multiplierDisplay">1.00x</h1>
 </div>
 
-<div id="gameInterface" class="hidden fixed inset-0 flex flex-col">
-  <div class="relative flex-1 bg-black border-b border-blue-700">
-    <canvas id="gameCanvas" class="absolute w-full h-full top-0 left-0"></canvas>
-    <div id="multiplierDisplay" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-bold text-cyan-400 glow pointer-events-none">
-      1.00x
+<div class="fixed bottom-0 w-full z-10 bg-black/80 backdrop-blur-sm border-t border-blue-800">
+  <div class="grid grid-cols-3 text-center py-2 text-blue-300">
+    <div>
+      <div>Balance</div>
+      <div id="balance" class="text-white text-lg font-bold">1000.00 CRO</div>
+    </div>
+    <div>
+      <div>Current Multiplier</div>
+      <div id="multiplier" class="text-white text-lg font-bold">1.00x</div>
+    </div>
+    <div>
+      <div>Profit</div>
+      <div id="profit" class="text-white text-lg font-bold">0.00 CRO</div>
     </div>
   </div>
-
-  <div class="bg-[#000B2F] border-t border-blue-800 shadow-inner backdrop-blur-md">
-    <div class="grid grid-cols-3 text-center py-3 text-sm text-blue-300 font-medium">
-      <div><div>Balance</div><div id="balance" class="text-white text-lg font-bold">1000.00 CRO</div></div>
-      <div><div>Current Multiplier</div><div id="multiplier" class="text-white text-lg font-bold">1.00x</div></div>
-      <div><div>Profit</div><div id="profit" class="text-white text-lg font-bold">0.00 CRO</div></div>
-    </div>
-    <div class="flex items-center gap-2 px-4 pb-4">
-      <input type="number" id="betAmount" placeholder="Bet Amount" class="w-full px-4 py-3 bg-[#001f3f] neon-border rounded-md text-white placeholder-blue-300">
-      <input type="number" id="autoCashout" placeholder="Auto Cashout" class="w-full px-4 py-3 bg-[#001f3f] neon-border rounded-md text-white placeholder-blue-300">
-      <button id="placeBet" class="px-5 py-3 bg-green-600 hover:bg-green-700 font-bold rounded-md text-white">LAUNCH</button>
-      <button id="cashout" disabled class="px-5 py-3 bg-red-700 font-bold rounded-md text-white opacity-50">EJECT</button>
-    </div>
+  <div class="flex items-center gap-2 p-4">
+    <input type="number" id="betAmount" placeholder="Bet" class="w-full px-4 py-2 bg-[#001f3f] neon-border rounded-md text-white placeholder-blue-300">
+    <input type="number" id="autoCashout" placeholder="Auto" class="w-full px-4 py-2 bg-[#001f3f] neon-border rounded-md text-white placeholder-blue-300">
+    <button id="placeBet" class="px-4 py-2 bg-green-600 hover:bg-green-700 font-bold rounded text-white">LAUNCH</button>
+    <button id="cashout" disabled class="px-4 py-2 bg-red-600 font-bold rounded text-white opacity-50">EJECT</button>
   </div>
 </div>
 
 <script>
-  document.getElementById('enterGame').onclick = () => {
-    document.getElementById('hero').classList.add('hidden');
-    document.getElementById('gameInterface').classList.remove('hidden');
-  };
-
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   let width = canvas.width = window.innerWidth;
-  let height = canvas.height = window.innerHeight * 0.6;
+  let height = canvas.height = window.innerHeight;
 
   window.addEventListener('resize', () => {
     width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight * 0.6;
+    height = canvas.height = window.innerHeight;
   });
 
-  const multiplierDisplay = document.getElementById('multiplierDisplay');
-  const multiplierStat = document.getElementById('multiplier');
-  const placeBetBtn = document.getElementById('placeBet');
-  const cashoutBtn = document.getElementById('cashout');
-  const betInput = document.getElementById('betAmount');
-  const autoInput = document.getElementById('autoCashout');
   const balanceDisplay = document.getElementById('balance');
   const profitDisplay = document.getElementById('profit');
+  const multiplierDisplay = document.getElementById('multiplierDisplay');
+  const multiplierStat = document.getElementById('multiplier');
+  const betInput = document.getElementById('betAmount');
+  const autoInput = document.getElementById('autoCashout');
+  const placeBetBtn = document.getElementById('placeBet');
+  const cashoutBtn = document.getElementById('cashout');
 
   let balance = 1000, bet = 0, profit = 0, multiplier = 1.00, autoCashout = 0;
   let running = false, crashed = false, ejected = false;
-  let speed = 0;
 
-  const plane = { x: width / 4, y: height - 80, vy: 0 };
+  const plane = { x: width / 2, y: height - 100, vy: 0, angle: 0 };
+  const particles = [];
   const jet = new Image();
   jet.src = 'https://raw.githubusercontent.com/LandoCrissian/CROPlane/refs/heads/main/C7913F41-A88A-4D02-8A12-615E78232C25.png';
 
-  let smokeParticles = [];
-
-  function drawSmoke() {
-    smokeParticles.forEach((p, i) => {
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(0,255,255,${p.alpha})`;
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fill();
-      p.y += 0.5;
-      p.alpha -= 0.01;
-      if (p.alpha <= 0) smokeParticles.splice(i, 1);
-    });
+  function updateUI() {
+    balanceDisplay.textContent = balance.toFixed(2) + ' CRO';
+    profitDisplay.textContent = profit.toFixed(2) + ' CRO';
+    multiplierDisplay.textContent = multiplier.toFixed(2) + 'x';
+    multiplierStat.textContent = multiplier.toFixed(2) + 'x';
   }
 
-  function drawPlane() {
-    if (!jet.complete) return;
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, height, 0, 0);
+    gradient.addColorStop(0, '#000B2F');
+    gradient.addColorStop(1, '#001F3F');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  function drawParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(0,255,255,${p.alpha})`;
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      p.y += p.vy;
+      p.alpha -= 0.01;
+      if (p.alpha <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function drawJet() {
     ctx.save();
     ctx.translate(plane.x, plane.y);
-    ctx.rotate(Math.sin(Date.now() / 200) * 0.05);
+    ctx.rotate(plane.angle);
     ctx.drawImage(jet, -40, -40, 80, 80);
     ctx.restore();
-
-    smokeParticles.push({
-      x: plane.x - 20,
-      y: plane.y + 30,
-      radius: Math.random() * 4 + 2,
-      alpha: 0.3 + Math.random() * 0.2
-    });
+    particles.push({ x: plane.x, y: plane.y + 20, vy: 1, size: Math.random() * 4 + 2, alpha: 0.3 });
   }
 
   function drawParachute() {
     ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(plane.x, plane.y - 30, 15, Math.PI, 0); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(plane.x, plane.y - 30, 15, Math.PI, 0);
+    ctx.fill();
     ctx.fillRect(plane.x - 2, plane.y - 20, 4, 20);
   }
 
@@ -136,36 +138,30 @@
     gradient.addColorStop(0, 'rgba(255, 70, 70, 1)');
     gradient.addColorStop(1, 'rgba(255, 70, 70, 0)');
     ctx.fillStyle = gradient;
-    ctx.beginPath(); ctx.arc(plane.x, plane.y, 60, 0, Math.PI * 2); ctx.fill();
-  }
-
-  function drawMultiplier() {
-    const text = multiplier.toFixed(2) + 'x';
-    multiplierDisplay.textContent = text;
-    multiplierStat.textContent = text;
-  }
-
-  function updateUI() {
-    balanceDisplay.textContent = balance.toFixed(2) + ' CRO';
-    profitDisplay.textContent = profit.toFixed(2) + ' CRO';
-    drawMultiplier();
+    ctx.beginPath();
+    ctx.arc(plane.x, plane.y, 60, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function gameLoop() {
     if (!running) return;
     ctx.clearRect(0, 0, width, height);
-    drawSmoke();
+    drawBackground();
+    drawParticles();
 
     if (!ejected && !crashed) {
-      speed = 1 + multiplier * 0.35;
-      plane.y -= speed;
+      let speed = 1 + multiplier * 0.4;
+      plane.vy = -speed;
+      plane.y += plane.vy;
+      plane.angle = -Math.atan2(speed, 20) * 0.5;
     } else if (crashed) {
       plane.y += 10;
+      plane.angle = 0.5;
     }
 
     if (crashed) drawExplosion();
     else if (ejected) drawParachute();
-    else drawPlane();
+    else drawJet();
 
     multiplier += 0.01;
     updateUI();
@@ -185,8 +181,8 @@
     multiplier = 1.00;
     ejected = crashed = false;
     running = true;
-    plane.y = height - 80;
-    smokeParticles = [];
+    plane.y = height - 100;
+    particles.length = 0;
     placeBetBtn.disabled = true;
     cashoutBtn.disabled = false;
     cashoutBtn.classList.remove('opacity-50');
@@ -200,7 +196,7 @@
     profit = bet * multiplier;
     balance += profit;
     updateUI();
-    setTimeout(reset, 2500);
+    setTimeout(reset, 3000);
   }
 
   function crash() {
@@ -208,7 +204,7 @@
     running = false;
     profit = -bet;
     updateUI();
-    setTimeout(reset, 2500);
+    setTimeout(reset, 3000);
   }
 
   function reset() {
@@ -216,7 +212,7 @@
     bet = 0;
     profit = 0;
     ejected = crashed = false;
-    plane.y = height - 80;
+    plane.y = height - 100;
     updateUI();
     placeBetBtn.disabled = false;
     cashoutBtn.disabled = true;
