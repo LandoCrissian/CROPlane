@@ -10,6 +10,8 @@
     body {
       font-family: 'Orbitron', sans-serif;
       background: linear-gradient(to bottom, #000B2F, #001F3F);
+      margin: 0;
+      overflow: hidden;
     }
     .glow {
       text-shadow: 0 0 8px #00eaff, 0 0 16px #00eaff;
@@ -29,7 +31,7 @@
   </style>
 </head>
 
-<body class="text-white overflow-hidden">
+<body class="text-white">
 
 <div id="hero" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black text-center">
   <h1 class="text-6xl font-bold text-blue-400 glow mb-4">CROPLANE</h1>
@@ -90,9 +92,9 @@ window.onload = () => {
 
   let balance = 1000, bet = 0, profit = 0, multiplier = 1.00, autoCashout = 0;
   let running = false, crashed = false, ejected = false;
-  let speedX = 2, speedY = -1;
+  let gravity = 0.15;
 
-  const plane = { x: width * 0.3, y: height * 0.75, vy: 0, vx: 2 };
+  const plane = { x: width * 0.3, y: height * 0.75, vx: 3, vy: -2 };
   const jet = new Image();
   jet.src = 'https://raw.githubusercontent.com/LandoCrissian/CROPlane/refs/heads/main/C7913F41-A88A-4D02-8A12-615E78232C25.png';
 
@@ -104,9 +106,9 @@ window.onload = () => {
       ctx.fillStyle = `rgba(0,255,255,${p.alpha})`;
       ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
       ctx.fill();
-      p.x -= 0.5;
-      p.y += 0.3;
-      p.alpha -= 0.01;
+      p.x -= 1;
+      p.y += 0.5;
+      p.alpha -= 0.015;
       if (p.alpha <= 0) smokeParticles.splice(i, 1);
     });
   }
@@ -115,12 +117,13 @@ window.onload = () => {
     if (!jet.complete) return;
     ctx.save();
     ctx.translate(plane.x, plane.y);
-    ctx.rotate(-0.2 + Math.sin(Date.now() / 300) * 0.05);
-    ctx.drawImage(jet, -40, -40, 80, 80);
+    const angle = Math.atan2(plane.vy, plane.vx);
+    ctx.rotate(angle);
+    ctx.drawImage(jet, -40, -30, 80, 60);
     ctx.restore();
     smokeParticles.push({
-      x: plane.x - 30,
-      y: plane.y + 20,
+      x: plane.x - Math.cos(angle) * 40,
+      y: plane.y - Math.sin(angle) * 40,
       radius: Math.random() * 4 + 2,
       alpha: 0.3 + Math.random() * 0.3
     });
@@ -162,8 +165,9 @@ window.onload = () => {
     drawSmoke();
 
     if (!ejected && !crashed) {
-      plane.x += plane.vx + (multiplier * 0.15);
-      plane.y += plane.vy + Math.sin(multiplier * 0.2) * 0.3;
+      plane.vy += gravity;
+      plane.x += plane.vx + multiplier * 0.1;
+      plane.y += plane.vy;
     } else if (crashed) {
       plane.y += 10;
       drawExplosion();
@@ -192,6 +196,8 @@ window.onload = () => {
     running = true;
     plane.x = width * 0.3;
     plane.y = height * 0.75;
+    plane.vx = 3;
+    plane.vy = -2;
     smokeParticles = [];
     placeBetBtn.disabled = true;
     cashoutBtn.disabled = false;
@@ -224,6 +230,8 @@ window.onload = () => {
     ejected = crashed = false;
     plane.x = width * 0.3;
     plane.y = height * 0.75;
+    plane.vx = 3;
+    plane.vy = -2;
     updateUI();
     placeBetBtn.disabled = false;
     cashoutBtn.disabled = true;
