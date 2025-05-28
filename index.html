@@ -10,8 +10,6 @@
     body {
       font-family: 'Orbitron', sans-serif;
       background: linear-gradient(to bottom, #000B2F, #001F3F);
-      margin: 0;
-      overflow: hidden;
     }
     .glow {
       text-shadow: 0 0 8px #00eaff, 0 0 16px #00eaff;
@@ -31,9 +29,8 @@
   </style>
 </head>
 
-<body class="text-white">
+<body class="text-white overflow-hidden">
 
-<!-- Hero -->
 <div id="hero" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black text-center">
   <h1 class="text-6xl font-bold text-blue-400 glow mb-4">CROPLANE</h1>
   <p class="text-xl text-blue-300 mb-8">Sky high stakes. Mid-air exits.</p>
@@ -42,7 +39,6 @@
   </button>
 </div>
 
-<!-- Game -->
 <div id="gameInterface" class="hidden fixed inset-0 flex flex-col">
   <div class="relative flex-1 bg-black border-b border-blue-700">
     <canvas id="gameCanvas" class="absolute w-full h-full top-0 left-0"></canvas>
@@ -67,11 +63,7 @@
 </div>
 
 <script>
-  document.getElementById('enterGame').onclick = () => {
-    document.getElementById('hero').classList.add('hidden');
-    document.getElementById('gameInterface').classList.remove('hidden');
-  };
-
+window.onload = () => {
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   let width = canvas.width = window.innerWidth;
@@ -81,6 +73,11 @@
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight * 0.6;
   });
+
+  document.getElementById('enterGame').onclick = () => {
+    document.getElementById('hero').classList.add('hidden');
+    document.getElementById('gameInterface').classList.remove('hidden');
+  };
 
   const multiplierDisplay = document.getElementById('multiplierDisplay');
   const multiplierStat = document.getElementById('multiplier');
@@ -93,18 +90,13 @@
 
   let balance = 1000, bet = 0, profit = 0, multiplier = 1.00, autoCashout = 0;
   let running = false, crashed = false, ejected = false;
+  let speedX = 2, speedY = -1;
 
-  let angle = 0;
+  const plane = { x: width * 0.3, y: height * 0.75, vy: 0, vx: 2 };
+  const jet = new Image();
+  jet.src = 'https://raw.githubusercontent.com/LandoCrissian/CROPlane/refs/heads/main/C7913F41-A88A-4D02-8A12-615E78232C25.png';
+
   let smokeParticles = [];
-
-  const plane = {
-    x: 100,
-    y: height / 2,
-    vx: 2,
-    vy: 0,
-    img: new Image()
-  };
-  plane.img.src = 'https://raw.githubusercontent.com/LandoCrissian/CROPlane/refs/heads/main/C7913F41-A88A-4D02-8A12-615E78232C25.png';
 
   function drawSmoke() {
     smokeParticles.forEach((p, i) => {
@@ -112,30 +104,30 @@
       ctx.fillStyle = `rgba(0,255,255,${p.alpha})`;
       ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
       ctx.fill();
-      p.x -= 1;
+      p.x -= 0.5;
+      p.y += 0.3;
       p.alpha -= 0.01;
       if (p.alpha <= 0) smokeParticles.splice(i, 1);
     });
   }
 
   function drawPlane() {
+    if (!jet.complete) return;
     ctx.save();
     ctx.translate(plane.x, plane.y);
-    angle = Math.min(0.5, (multiplier / 10));
-    ctx.rotate(angle);
-    ctx.drawImage(plane.img, -40, -30, 80, 60);
+    ctx.rotate(-0.2 + Math.sin(Date.now() / 300) * 0.05);
+    ctx.drawImage(jet, -40, -40, 80, 80);
     ctx.restore();
-
     smokeParticles.push({
-      x: plane.x - 40,
-      y: plane.y + 10,
+      x: plane.x - 30,
+      y: plane.y + 20,
       radius: Math.random() * 4 + 2,
-      alpha: 0.3 + Math.random() * 0.2
+      alpha: 0.3 + Math.random() * 0.3
     });
   }
 
   function drawParachute() {
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(plane.x, plane.y - 30, 15, Math.PI, 0);
     ctx.fill();
@@ -143,10 +135,10 @@
   }
 
   function drawExplosion() {
-    const gradient = ctx.createRadialGradient(plane.x, plane.y, 0, plane.x, plane.y, 60);
-    gradient.addColorStop(0, 'rgba(255, 70, 70, 1)');
-    gradient.addColorStop(1, 'rgba(255, 70, 70, 0)');
-    ctx.fillStyle = gradient;
+    const g = ctx.createRadialGradient(plane.x, plane.y, 0, plane.x, plane.y, 60);
+    g.addColorStop(0, 'rgba(255, 70, 70, 1)');
+    g.addColorStop(1, 'rgba(255, 70, 70, 0)');
+    ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(plane.x, plane.y, 60, 0, Math.PI * 2);
     ctx.fill();
@@ -170,14 +162,14 @@
     drawSmoke();
 
     if (!ejected && !crashed) {
-      plane.x += plane.vx + (multiplier * 0.1);
-      plane.y += Math.sin(plane.x * 0.01) * 0.5;
+      plane.x += plane.vx + (multiplier * 0.15);
+      plane.y += plane.vy + Math.sin(multiplier * 0.2) * 0.3;
     } else if (crashed) {
       plane.y += 10;
+      drawExplosion();
     }
 
-    if (crashed) drawExplosion();
-    else if (ejected) drawParachute();
+    if (ejected) drawParachute();
     else drawPlane();
 
     multiplier += 0.01;
@@ -198,8 +190,8 @@
     multiplier = 1.00;
     ejected = crashed = false;
     running = true;
-    plane.x = 100;
-    plane.y = height / 2;
+    plane.x = width * 0.3;
+    plane.y = height * 0.75;
     smokeParticles = [];
     placeBetBtn.disabled = true;
     cashoutBtn.disabled = false;
@@ -230,8 +222,8 @@
     bet = 0;
     profit = 0;
     ejected = crashed = false;
-    plane.x = 100;
-    plane.y = height / 2;
+    plane.x = width * 0.3;
+    plane.y = height * 0.75;
     updateUI();
     placeBetBtn.disabled = false;
     cashoutBtn.disabled = true;
@@ -241,6 +233,7 @@
 
   placeBetBtn.addEventListener('click', startGame);
   cashoutBtn.addEventListener('click', eject);
+};
 </script>
 
 </body>
