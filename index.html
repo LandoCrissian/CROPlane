@@ -1,248 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-[#0b0f14] text-white">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>CROPLANE | Sky high stakes. Mid-air exits.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VaultLeakX | Cronos Alpha Scanner</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    body {
-      font-family: 'Orbitron', sans-serif;
-      background: linear-gradient(to bottom, #000B2F, #001F3F);
-      margin: 0;
-      overflow: hidden;
-    }
-    .glow {
-      text-shadow: 0 0 8px #00eaff, 0 0 16px #00eaff;
-    }
-    .neon-border {
-      border: 2px solid rgba(0, 255, 255, 0.2);
-      box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
-    }
-    input::-webkit-inner-spin-button,
-    input::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
+    ::-webkit-scrollbar { display: none; }
+    .tx-card:hover { background-color: #1f2937; }
   </style>
 </head>
-
-<body class="text-white">
-
-<div id="hero" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black text-center">
-  <h1 class="text-6xl font-bold text-blue-400 glow mb-4">CROPLANE</h1>
-  <p class="text-xl text-blue-300 mb-8">Sky high stakes. Mid-air exits.</p>
-  <button id="enterGame" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg">
-    Enter Flight
-  </button>
-</div>
-
-<div id="gameInterface" class="hidden fixed inset-0 flex flex-col">
-  <div class="relative flex-1 bg-black border-b border-blue-700">
-    <canvas id="gameCanvas" class="absolute w-full h-full top-0 left-0"></canvas>
-    <div id="multiplierDisplay" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-bold text-cyan-400 glow pointer-events-none">
-      1.00x
-    </div>
+<body class="font-mono overflow-hidden">
+  <!-- HEADER -->
+  <div class="w-full px-6 py-4 bg-[#111827] border-b border-lime-500 flex items-center justify-between">
+    <h1 class="text-2xl text-lime-400 font-bold">VaultLeakX</h1>
+    <span class="text-gray-400 text-sm">Cronos Mempool Surveillance v1.0</span>
   </div>
 
-  <div class="bg-[#000B2F] border-t border-blue-800 shadow-inner backdrop-blur-md">
-    <div class="grid grid-cols-3 text-center py-3 text-sm text-blue-300 font-medium">
-      <div><div>Balance</div><div id="balance" class="text-white text-lg font-bold">1000.00 CRO</div></div>
-      <div><div>Current Multiplier</div><div id="multiplier" class="text-white text-lg font-bold">1.00x</div></div>
-      <div><div>Profit</div><div id="profit" class="text-white text-lg font-bold">0.00 CRO</div></div>
+  <div class="flex h-[calc(100vh-64px)]">
+    <!-- SIDEBAR FILTERS -->
+    <div class="w-64 bg-[#0f172a] border-r border-gray-800 p-4 space-y-4">
+      <h2 class="text-lg font-semibold text-lime-300">Filters</h2>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" id="toggleDeploys" checked class="accent-lime-400" />
+        <span>Contract Deploys</span>
+      </label>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" id="toggleWhales" checked class="accent-lime-400" />
+        <span>Whale Transfers</span>
+      </label>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" id="toggleGas" checked class="accent-lime-400" />
+        <span>Gas Bombs</span>
+      </label>
+      <div class="mt-6 text-xs text-gray-400">
+        Designed for Y2K Syndicate Ops
+      </div>
     </div>
-    <div class="flex items-center gap-2 px-4 pb-4">
-      <input type="number" id="betAmount" placeholder="Bet Amount" class="w-full px-4 py-3 bg-[#001f3f] neon-border rounded-md text-white placeholder-blue-300">
-      <input type="number" id="autoCashout" placeholder="Auto Cashout" class="w-full px-4 py-3 bg-[#001f3f] neon-border rounded-md text-white placeholder-blue-300">
-      <button id="placeBet" class="px-5 py-3 bg-green-600 hover:bg-green-700 font-bold rounded-md text-white">LAUNCH</button>
-      <button id="cashout" disabled class="px-5 py-3 bg-red-700 font-bold rounded-md text-white opacity-50">EJECT</button>
-    </div>
+
+    <!-- LIVE FEED -->
+    <div class="flex-1 p-4 overflow-y-scroll space-y-2" id="txFeed"></div>
   </div>
-</div>
 
-<script>
-window.onload = () => {
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  let width = canvas.width = window.innerWidth;
-  let height = canvas.height = window.innerHeight * 0.6;
+  <!-- SCANNER LOGIC -->
+  <script>
+    const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
+    const feed = document.getElementById('txFeed');
 
-  window.addEventListener('resize', () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight * 0.6;
-  });
+    const deployFilter = document.getElementById('toggleDeploys');
+    const whaleFilter = document.getElementById('toggleWhales');
+    const gasFilter = document.getElementById('toggleGas');
 
-  document.getElementById('enterGame').onclick = () => {
-    document.getElementById('hero').classList.add('hidden');
-    document.getElementById('gameInterface').classList.remove('hidden');
-  };
+    provider.on('pending', async (txHash) => {
+      try {
+        const tx = await provider.getTransaction(txHash);
+        if (!tx) return;
 
-  const multiplierDisplay = document.getElementById('multiplierDisplay');
-  const multiplierStat = document.getElementById('multiplier');
-  const placeBetBtn = document.getElementById('placeBet');
-  const cashoutBtn = document.getElementById('cashout');
-  const betInput = document.getElementById('betAmount');
-  const autoInput = document.getElementById('autoCashout');
-  const balanceDisplay = document.getElementById('balance');
-  const profitDisplay = document.getElementById('profit');
+        const valueEth = parseFloat(ethers.utils.formatEther(tx.value || 0));
+        const gasGwei = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
 
-  let balance = 1000, bet = 0, profit = 0, multiplier = 1.00, autoCashout = 0;
-  let running = false, crashed = false, ejected = false;
-  let gravity = 0.15;
+        const isDeploy = tx.to === null;
+        const isWhale = valueEth > 100;
+        const isGasBomb = gasGwei > 100;
 
-  const plane = { x: width * 0.3, y: height * 0.75, vx: 3, vy: -2 };
-  const jet = new Image();
-  jet.src = 'https://raw.githubusercontent.com/LandoCrissian/CROPlane/refs/heads/main/C7913F41-A88A-4D02-8A12-615E78232C25.png';
+        if (
+          (isDeploy && deployFilter.checked) ||
+          (isWhale && whaleFilter.checked) ||
+          (isGasBomb && gasFilter.checked)
+        ) {
+          const card = document.createElement('div');
+          card.className = `tx-card p-3 rounded-lg border ${
+            isDeploy ? 'border-yellow-400' : isWhale ? 'border-green-400' : 'border-red-500'
+          }`;
 
-  let smokeParticles = [];
-
-  function drawSmoke() {
-    smokeParticles.forEach((p, i) => {
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(0,255,255,${p.alpha})`;
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fill();
-      p.x -= 1;
-      p.y += 0.5;
-      p.alpha -= 0.015;
-      if (p.alpha <= 0) smokeParticles.splice(i, 1);
+          card.innerHTML = `
+            <div class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
+            <div class="text-sm font-semibold">${isDeploy ? '🚀 Contract Deploy' : isWhale ? '🦈 Whale Transfer' : '🔥 Gas Bomb'}</div>
+            <div class="text-xs mt-1">Hash: ${txHash.slice(0, 18)}...</div>
+            <div class="text-xs">From: ${tx.from}</div>
+            <div class="text-xs">To: ${tx.to || 'N/A'}</div>
+            <div class="text-xs">Value: ${valueEth.toFixed(3)} CRO</div>
+            <div class="text-xs">Gas: ${gasGwei.toFixed(2)} Gwei</div>
+          `;
+          feed.prepend(card);
+        }
+      } catch (e) {
+        console.log('Error processing tx', e);
+      }
     });
-  }
-
-  function drawPlane() {
-    if (!jet.complete) return;
-    ctx.save();
-    ctx.translate(plane.x, plane.y);
-    const angle = Math.atan2(plane.vy, plane.vx);
-    ctx.rotate(angle);
-    ctx.drawImage(jet, -40, -30, 80, 60);
-    ctx.restore();
-    smokeParticles.push({
-      x: plane.x - Math.cos(angle) * 40,
-      y: plane.y - Math.sin(angle) * 40,
-      radius: Math.random() * 4 + 2,
-      alpha: 0.3 + Math.random() * 0.3
-    });
-  }
-
-  function drawParachute() {
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(plane.x, plane.y - 30, 15, Math.PI, 0);
-    ctx.fill();
-    ctx.fillRect(plane.x - 2, plane.y - 20, 4, 20);
-  }
-
-  function drawExplosion() {
-    const g = ctx.createRadialGradient(plane.x, plane.y, 0, plane.x, plane.y, 60);
-    g.addColorStop(0, 'rgba(255, 70, 70, 1)');
-    g.addColorStop(1, 'rgba(255, 70, 70, 0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(plane.x, plane.y, 60, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawMultiplier() {
-    const text = multiplier.toFixed(2) + 'x';
-    multiplierDisplay.textContent = text;
-    multiplierStat.textContent = text;
-  }
-
-  function updateUI() {
-    balanceDisplay.textContent = balance.toFixed(2) + ' CRO';
-    profitDisplay.textContent = profit.toFixed(2) + ' CRO';
-    drawMultiplier();
-  }
-
-  function gameLoop() {
-    if (!running) return;
-    ctx.clearRect(0, 0, width, height);
-    drawSmoke();
-
-    if (!ejected && !crashed) {
-      plane.vy += gravity;
-      plane.x += plane.vx + multiplier * 0.1;
-      plane.y += plane.vy;
-    } else if (crashed) {
-      plane.y += 10;
-      drawExplosion();
-    }
-
-    if (ejected) drawParachute();
-    else drawPlane();
-
-    multiplier += 0.01;
-    updateUI();
-
-    if (!ejected && autoCashout > 0 && multiplier >= autoCashout) return eject();
-    if (!ejected && Math.random() < 0.01) return crash();
-
-    requestAnimationFrame(gameLoop);
-  }
-
-  function startGame() {
-    bet = parseFloat(betInput.value) || 0;
-    autoCashout = parseFloat(autoInput.value) || 0;
-    if (bet <= 0 || bet > balance) return;
-    balance -= bet;
-    profit = 0;
-    multiplier = 1.00;
-    ejected = crashed = false;
-    running = true;
-    plane.x = width * 0.3;
-    plane.y = height * 0.75;
-    plane.vx = 3;
-    plane.vy = -2;
-    smokeParticles = [];
-    placeBetBtn.disabled = true;
-    cashoutBtn.disabled = false;
-    cashoutBtn.classList.remove('opacity-50');
-    gameLoop();
-  }
-
-  function eject() {
-    if (!running) return;
-    ejected = true;
-    running = false;
-    profit = bet * multiplier;
-    balance += profit;
-    updateUI();
-    setTimeout(reset, 2500);
-  }
-
-  function crash() {
-    crashed = true;
-    running = false;
-    profit = -bet;
-    updateUI();
-    setTimeout(reset, 2500);
-  }
-
-  function reset() {
-    multiplier = 1.00;
-    bet = 0;
-    profit = 0;
-    ejected = crashed = false;
-    plane.x = width * 0.3;
-    plane.y = height * 0.75;
-    plane.vx = 3;
-    plane.vy = -2;
-    updateUI();
-    placeBetBtn.disabled = false;
-    cashoutBtn.disabled = true;
-    cashoutBtn.classList.add('opacity-50');
-    ctx.clearRect(0, 0, width, height);
-  }
-
-  placeBetBtn.addEventListener('click', startGame);
-  cashoutBtn.addEventListener('click', eject);
-};
-</script>
-
+  </script>
 </body>
 </html>
