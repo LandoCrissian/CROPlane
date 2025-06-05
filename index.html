@@ -1,94 +1,99 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-[#0b0f14] text-white">
+<html lang="en" class="bg-black text-white">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VaultLeakX | Cronos Alpha Scanner</title>
+  <title>VaultLeakX | Cronos Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    ::-webkit-scrollbar { display: none; }
-    .tx-card:hover { background-color: #1f2937; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #10b981; }
+    .event:hover { background-color: rgba(255, 255, 255, 0.05); }
+    .glow { text-shadow: 0 0 4px #10b981; }
   </style>
 </head>
 <body class="font-mono overflow-hidden">
-  <!-- HEADER -->
-  <div class="w-full px-6 py-4 bg-[#111827] border-b border-lime-500 flex items-center justify-between">
-    <h1 class="text-2xl text-lime-400 font-bold">VaultLeakX</h1>
-    <span class="text-gray-400 text-sm">Cronos Mempool Surveillance v1.0</span>
+
+  <!-- Header -->
+  <div class="flex justify-between items-center px-6 py-4 bg-[#0f172a] border-b border-lime-400">
+    <h1 class="text-2xl glow font-bold text-lime-400 tracking-widest">VAULTLEAKX</h1>
+    <div class="flex space-x-4 text-xs">
+      <span class="text-gray-400">CHAIN:</span><span class="text-green-400">CRONOS</span>
+      <span class="text-gray-400">STATUS:</span><span class="animate-pulse text-lime-500">LIVE</span>
+    </div>
   </div>
 
   <div class="flex h-[calc(100vh-64px)]">
-    <!-- SIDEBAR FILTERS -->
-    <div class="w-64 bg-[#0f172a] border-r border-gray-800 p-4 space-y-4">
-      <h2 class="text-lg font-semibold text-lime-300">Filters</h2>
-      <label class="flex items-center space-x-2">
-        <input type="checkbox" id="toggleDeploys" checked class="accent-lime-400" />
-        <span>Contract Deploys</span>
-      </label>
-      <label class="flex items-center space-x-2">
-        <input type="checkbox" id="toggleWhales" checked class="accent-lime-400" />
-        <span>Whale Transfers</span>
-      </label>
-      <label class="flex items-center space-x-2">
-        <input type="checkbox" id="toggleGas" checked class="accent-lime-400" />
-        <span>Gas Bombs</span>
-      </label>
-      <div class="mt-6 text-xs text-gray-400">
-        Designed for Y2K Syndicate Ops
-      </div>
-    </div>
+    <!-- Sidebar Filters -->
+    <aside class="w-64 bg-[#111827] p-4 space-y-3 border-r border-gray-800">
+      <h2 class="text-lime-300 font-semibold mb-2">Filters</h2>
+      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="deploys" checked> <span>Contract Deploys</span></label>
+      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="whales" checked> <span>Whale Transfers</span></label>
+      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
+      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
+      <div class="mt-6 text-xs text-gray-500">Only verified holders will unlock tagging & tracking intelligence in v2.</div>
+    </aside>
 
-    <!-- LIVE FEED -->
-    <div class="flex-1 p-4 overflow-y-scroll space-y-2" id="txFeed"></div>
+    <!-- Feed -->
+    <main class="flex-1 bg-[#0b0f14] overflow-y-scroll p-4 space-y-3" id="feed"></main>
   </div>
 
-  <!-- SCANNER LOGIC -->
+  <!-- JS Logic -->
   <script>
     const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
-    const feed = document.getElementById('txFeed');
+    const knownRouters = [
+      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30', // MMF Router
+      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS Router
+      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // CronaSwap Router
+    ];
+    const feed = document.getElementById('feed');
 
-    const deployFilter = document.getElementById('toggleDeploys');
-    const whaleFilter = document.getElementById('toggleWhales');
-    const gasFilter = document.getElementById('toggleGas');
+    function renderEvent(type, tx, info = {}) {
+      const card = document.createElement('div');
+      card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm';
+      card.innerHTML = `
+        <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
+        <div class="font-semibold">${type}</div>
+        <div class="text-xs mt-1">From: ${tx.from}</div>
+        <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
+        <div class="text-xs">Value: ${ethers.utils.formatEther(tx.value || 0)} CRO</div>
+        <div class="text-xs">Gas: ${tx.gasPrice ? ethers.utils.formatUnits(tx.gasPrice, 'gwei') : 'N/A'} Gwei</div>
+        ${info.tag ? `<div class="mt-1 text-xs text-lime-400">🔖 ${info.tag}</div>` : ''}
+      `;
+      feed.prepend(card);
+    }
 
-    provider.on('pending', async (txHash) => {
-      try {
-        const tx = await provider.getTransaction(txHash);
-        if (!tx) return;
+    async function scanBlock() {
+      const block = await provider.getBlockWithTransactions('latest');
+      const filters = {
+        deploys: document.getElementById('deploys').checked,
+        whales: document.getElementById('whales').checked,
+        gas: document.getElementById('gas').checked,
+        dex: document.getElementById('dex').checked
+      };
 
-        const valueEth = parseFloat(ethers.utils.formatEther(tx.value || 0));
-        const gasGwei = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
+      block.transactions.forEach(tx => {
+        const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
+        const gas = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
+        const to = tx.to?.toLowerCase();
 
-        const isDeploy = tx.to === null;
-        const isWhale = valueEth > 100;
-        const isGasBomb = gasGwei > 100;
-
-        if (
-          (isDeploy && deployFilter.checked) ||
-          (isWhale && whaleFilter.checked) ||
-          (isGasBomb && gasFilter.checked)
-        ) {
-          const card = document.createElement('div');
-          card.className = `tx-card p-3 rounded-lg border ${
-            isDeploy ? 'border-yellow-400' : isWhale ? 'border-green-400' : 'border-red-500'
-          }`;
-
-          card.innerHTML = `
-            <div class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
-            <div class="text-sm font-semibold">${isDeploy ? '🚀 Contract Deploy' : isWhale ? '🦈 Whale Transfer' : '🔥 Gas Bomb'}</div>
-            <div class="text-xs mt-1">Hash: ${txHash.slice(0, 18)}...</div>
-            <div class="text-xs">From: ${tx.from}</div>
-            <div class="text-xs">To: ${tx.to || 'N/A'}</div>
-            <div class="text-xs">Value: ${valueEth.toFixed(3)} CRO</div>
-            <div class="text-xs">Gas: ${gasGwei.toFixed(2)} Gwei</div>
-          `;
-          feed.prepend(card);
+        if (tx.to === null && filters.deploys) {
+          renderEvent('🚀 Contract Deployed', tx, { tag: 'New Token or Factory' });
         }
-      } catch (e) {
-        console.log('Error processing tx', e);
-      }
-    });
+        else if (val > 100 && filters.whales) {
+          renderEvent('🦈 Whale Transfer', tx, { tag: val + ' CRO moved' });
+        }
+        else if (gas > 100 && filters.gas) {
+          renderEvent('🔥 Gas Bomb Detected', tx, { tag: gas + ' Gwei' });
+        }
+        else if (knownRouters.includes(to) && filters.dex) {
+          renderEvent('💱 DEX Router Interaction', tx, { tag: 'VVS/MMF/Crona' });
+        }
+      });
+    }
+
+    setInterval(scanBlock, 3000);
   </script>
 </body>
 </html>
