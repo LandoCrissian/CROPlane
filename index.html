@@ -47,74 +47,77 @@
 
   <!-- JS Logic -->
   <script>
-    const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
-    const knownRouters = [
-      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30', // MMF
-      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS
-      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // Crona
-    ];
-    let scanned = 0;
+  const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
+  const knownRouters = [
+    '0x145677fc4d9b8f19b5d56d1820c48e0443049a30', // MMF
+    '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS
+    '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // Crona
+  ];
+  let scanned = 0;
 
-    const feed = document.getElementById('feed');
-    const txCounter = document.getElementById('txCount');
+  const feed = document.getElementById('feed');
+  const txCounter = document.getElementById('txCount');
 
-    function renderEvent(type, tx, info = {}) {
-      scanned++;
-      txCounter.textContent = scanned;
+  function renderEvent(type, tx, info = {}) {
+    scanned++;
+    txCounter.textContent = scanned;
 
-      const card = document.createElement('div');
-      card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm transition-all duration-100';
+    const valueFormatted = Number(ethers.utils.formatEther(tx.value || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const gasFormatted = tx.gasPrice ? Number(ethers.utils.formatUnits(tx.gasPrice, 'gwei')).toLocaleString(undefined, { minimumFractionDigits: 2 }) : 'N/A';
 
-      const tags = {
-        '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
-        '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
-        '🔥 Gas Bomb Detected': '<span class="badge gas">Gas Surge</span>',
-        '💱 DEX Router Interaction': '<span class="badge dex">DEX Tx</span>',
-      };
+    const card = document.createElement('div');
+    card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm transition-all duration-100';
 
-      card.innerHTML = `
-        <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
-        <div class="font-semibold flex items-center gap-2">${type}</div>
-        <div class="text-xs mt-1">From: ${tx.from}</div>
-        <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
-        <div class="text-xs">Value: ${ethers.utils.formatEther(tx.value || 0)} CRO</div>
-        <div class="text-xs">Gas: ${tx.gasPrice ? ethers.utils.formatUnits(tx.gasPrice, 'gwei') : 'N/A'} Gwei</div>
-        <div class="text-xs mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
-        <div class="mt-2">${tags[type] || ''} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
-      `;
-      feed.prepend(card);
-    }
+    const tags = {
+      '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
+      '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
+      '🔥 Gas Bomb Detected': `<span class="badge gas">Gas Surge</span> ${gasFormatted > 2000 ? '<span class="badge gas">🚨 Severe</span>' : ''}`,
+      '💱 DEX Router Interaction': '<span class="badge dex">DEX Tx</span>',
+    };
 
-    async function scanBlock() {
-      const block = await provider.getBlockWithTransactions('latest');
-      const filters = {
-        deploys: document.getElementById('deploys').checked,
-        whales: document.getElementById('whales').checked,
-        gas: document.getElementById('gas').checked,
-        dex: document.getElementById('dex').checked
-      };
+    card.innerHTML = `
+      <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
+      <div class="font-semibold flex items-center gap-2">${type}</div>
+      <div class="text-xs mt-1">From: ${tx.from}</div>
+      <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
+      <div class="text-xs">Value: ${valueFormatted} CRO</div>
+      <div class="text-xs">Gas: ${gasFormatted} Gwei</div>
+      <div class="text-xs mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
+      <div class="mt-2">${tags[type] || ''} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
+    `;
+    feed.prepend(card);
+  }
 
-      block.transactions.forEach(tx => {
-        const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
-        const gas = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
-        const to = tx.to?.toLowerCase();
+  async function scanBlock() {
+    const block = await provider.getBlockWithTransactions('latest');
+    const filters = {
+      deploys: document.getElementById('deploys').checked,
+      whales: document.getElementById('whales').checked,
+      gas: document.getElementById('gas').checked,
+      dex: document.getElementById('dex').checked
+    };
 
-        if (tx.to === null && filters.deploys) {
-          renderEvent('🚀 Contract Deployed', tx);
-        }
-        else if (val > 100 && filters.whales) {
-          renderEvent('🦈 Whale Transfer', tx, { tag: val + ' CRO moved' });
-        }
-        else if (gas > 100 && filters.gas) {
-          renderEvent('🔥 Gas Bomb Detected', tx, { tag: gas + ' Gwei' });
-        }
-        else if (knownRouters.includes(to) && filters.dex) {
-          renderEvent('💱 DEX Router Interaction', tx, { tag: 'Router TX' });
-        }
-      });
-    }
+    block.transactions.forEach(tx => {
+      const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
+      const gas = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
+      const to = tx.to?.toLowerCase();
 
-    setInterval(scanBlock, 3000);
-  </script>
+      if (tx.to === null && filters.deploys) {
+        renderEvent('🚀 Contract Deployed', tx);
+      }
+      else if (val > 1000 && filters.whales) {
+        renderEvent('🦈 Whale Transfer', tx, { tag: `${val.toLocaleString()} CRO moved` });
+      }
+      else if (gas > 100 && filters.gas) {
+        renderEvent('🔥 Gas Bomb Detected', tx, { tag: `${gas.toLocaleString()} Gwei` });
+      }
+      else if (knownRouters.includes(to) && filters.dex) {
+        renderEvent('💱 DEX Router Interaction', tx, { tag: 'Router TX' });
+      }
+    });
+  }
+
+  setInterval(scanBlock, 3000);
+</script>
 </body>
 </html>
