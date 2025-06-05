@@ -9,8 +9,13 @@
   <style>
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: #10b981; }
-    .event:hover { background-color: rgba(255, 255, 255, 0.05); }
+    .event:hover { background-color: rgba(255, 255, 255, 0.05); transform: scale(1.01); }
     .glow { text-shadow: 0 0 4px #10b981; }
+    .badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
+    .badge.deploy { background: #facc15; color: #000; }
+    .badge.whale { background: #10b981; }
+    .badge.gas { background: #f87171; }
+    .badge.dex { background: #60a5fa; }
   </style>
 </head>
 <body class="font-mono overflow-hidden">
@@ -18,9 +23,10 @@
   <!-- Header -->
   <div class="flex justify-between items-center px-6 py-4 bg-[#0f172a] border-b border-lime-400">
     <h1 class="text-2xl glow font-bold text-lime-400 tracking-widest">VAULTLEAKX</h1>
-    <div class="flex space-x-4 text-xs">
-      <span class="text-gray-400">CHAIN:</span><span class="text-green-400">CRONOS</span>
-      <span class="text-gray-400">STATUS:</span><span class="animate-pulse text-lime-500">LIVE</span>
+    <div class="flex space-x-6 text-xs">
+      <div><span class="text-gray-400">CHAIN:</span> <span class="text-green-400">CRONOS</span></div>
+      <div><span class="text-gray-400">STATUS:</span> <span class="animate-pulse text-lime-500">LIVE</span></div>
+      <div><span class="text-gray-400">TXs SCANNED:</span> <span id="txCount" class="text-white">0</span></div>
     </div>
   </div>
 
@@ -32,7 +38,7 @@
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="whales" checked> <span>Whale Transfers</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
-      <div class="mt-6 text-xs text-gray-500">Only verified holders will unlock tagging & tracking intelligence in v2.</div>
+      <div class="mt-6 text-xs text-gray-500">v2: Verified holders unlock tagging, tracking & deep AI patterning.</div>
     </aside>
 
     <!-- Feed -->
@@ -43,23 +49,38 @@
   <script>
     const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
     const knownRouters = [
-      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30', // MMF Router
-      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS Router
-      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // CronaSwap Router
+      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30', // MMF
+      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS
+      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // Crona
     ];
+    let scanned = 0;
+
     const feed = document.getElementById('feed');
+    const txCounter = document.getElementById('txCount');
 
     function renderEvent(type, tx, info = {}) {
+      scanned++;
+      txCounter.textContent = scanned;
+
       const card = document.createElement('div');
-      card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm';
+      card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm transition-all duration-100';
+
+      const tags = {
+        '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
+        '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
+        '🔥 Gas Bomb Detected': '<span class="badge gas">Gas Surge</span>',
+        '💱 DEX Router Interaction': '<span class="badge dex">DEX Tx</span>',
+      };
+
       card.innerHTML = `
         <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
-        <div class="font-semibold">${type}</div>
+        <div class="font-semibold flex items-center gap-2">${type}</div>
         <div class="text-xs mt-1">From: ${tx.from}</div>
         <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
         <div class="text-xs">Value: ${ethers.utils.formatEther(tx.value || 0)} CRO</div>
         <div class="text-xs">Gas: ${tx.gasPrice ? ethers.utils.formatUnits(tx.gasPrice, 'gwei') : 'N/A'} Gwei</div>
-        ${info.tag ? `<div class="mt-1 text-xs text-lime-400">🔖 ${info.tag}</div>` : ''}
+        <div class="text-xs mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
+        <div class="mt-2">${tags[type] || ''} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
       `;
       feed.prepend(card);
     }
@@ -79,7 +100,7 @@
         const to = tx.to?.toLowerCase();
 
         if (tx.to === null && filters.deploys) {
-          renderEvent('🚀 Contract Deployed', tx, { tag: 'New Token or Factory' });
+          renderEvent('🚀 Contract Deployed', tx);
         }
         else if (val > 100 && filters.whales) {
           renderEvent('🦈 Whale Transfer', tx, { tag: val + ' CRO moved' });
@@ -88,7 +109,7 @@
           renderEvent('🔥 Gas Bomb Detected', tx, { tag: gas + ' Gwei' });
         }
         else if (knownRouters.includes(to) && filters.dex) {
-          renderEvent('💱 DEX Router Interaction', tx, { tag: 'VVS/MMF/Crona' });
+          renderEvent('💱 DEX Router Interaction', tx, { tag: 'Router TX' });
         }
       });
     }
