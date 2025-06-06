@@ -2,16 +2,16 @@
 <html lang="en" class="bg-black text-white">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VaultLeakX | Cronos Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: #10b981; }
     .event:hover { background-color: rgba(255, 255, 255, 0.05); transform: scale(1.01); }
     .glow { text-shadow: 0 0 4px #10b981; }
-    .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; word-wrap: break-word; }
+    .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; white-space: nowrap; }
     .badge.deploy { background: #facc15; color: #000; }
     .badge.whale { background: #10b981; }
     .badge.mid { background: #f472b6; }
@@ -19,34 +19,36 @@
     .badge.gas { background: #f87171; }
     .badge.dex { background: #60a5fa; }
     .badge.token { background: #c084fc; }
+    .badge.smart { background: #22d3ee; }
     .badge.wallet { background: #f97316; }
     .badge.buy { background: #22c55e; }
     .badge.sell { background: #ef4444; }
+    img.token-logo { width: 16px; height: 16px; display: inline-block; margin-right: 4px; vertical-align: middle; border-radius: 50%; }
   </style>
 </head>
 <body class="font-mono overflow-hidden">
-  <div class="flex justify-between items-center px-6 py-4 bg-[#0f172a] border-b border-lime-400">
-    <h1 class="text-xl glow font-bold text-lime-400 tracking-widest">VAULTLEAKX</h1>
-    <div class="flex flex-wrap justify-end gap-4 text-xs">
+  <div class="flex justify-between items-center px-4 py-3 bg-[#0f172a] border-b border-lime-400 text-xs md:text-sm">
+    <h1 class="text-xl md:text-2xl glow font-bold text-lime-400 tracking-widest">VAULTLEAKX</h1>
+    <div class="flex space-x-4">
       <div><span class="text-gray-400">CHAIN:</span> <span class="text-green-400">CRONOS</span></div>
       <div><span class="text-gray-400">STATUS:</span> <span class="animate-pulse text-lime-500">LIVE</span></div>
-      <div><span class="text-gray-400">TXs:</span> <span id="txCount" class="text-white">0</span></div>
+      <div><span class="text-gray-400">TXs SCANNED:</span> <span id="txCount" class="text-white">0</span></div>
     </div>
   </div>
 
-  <div class="flex h-[calc(100vh-64px)]">
-    <aside class="w-60 bg-[#111827] p-3 space-y-3 border-r border-gray-800 text-sm">
-      <h2 class="text-lime-300 font-semibold">Filters</h2>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="deploys" checked> <span>Deploys</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="whales" checked> <span>Whales</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="mid" checked> <span>Mid</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="small" checked> <span>Small</span></label>
+  <div class="flex flex-col md:flex-row h-[calc(100vh-56px)]">
+    <aside class="md:w-64 bg-[#111827] p-4 space-y-3 border-b md:border-b-0 md:border-r border-gray-800 text-sm">
+      <h2 class="text-lime-300 font-semibold mb-2">Filters</h2>
+      <label class="flex items-center space-x-2"><input type="checkbox" id="deploys" checked> <span>Contract Deploys</span></label>
+      <label class="flex items-center space-x-2"><input type="checkbox" id="whales" checked> <span>Whale Transfers</span></label>
+      <label class="flex items-center space-x-2"><input type="checkbox" id="mid" checked> <span>Mid Transfers</span></label>
+      <label class="flex items-center space-x-2"><input type="checkbox" id="small" checked> <span>Small Transfers</span></label>
       <label class="flex items-center space-x-2"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="dex" checked> <span>DEX TX</span></label>
-      <div class="text-xs text-gray-500 pt-4">v3.2 – Now with token preview, wallet labels & DEX logic</div>
+      <label class="flex items-center space-x-2"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
+      <div class="mt-6 text-xs text-gray-500">v3.3: Token logos, buy/sell tagging, wallet identities.</div>
     </aside>
 
-    <main class="flex-1 bg-[#0b0f14] overflow-y-scroll p-3 space-y-3 text-sm" id="feed"></main>
+    <main class="flex-1 bg-[#0b0f14] overflow-y-scroll p-3 md:p-4 space-y-3 text-xs md:text-sm" id="feed"></main>
   </div>
 
   <script>
@@ -77,29 +79,29 @@
       const gasFormatted = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')).toLocaleString(undefined, { minimumFractionDigits: 2 }) : 'N/A';
 
       const tags = {
-        '🚀 Contract Deployed': '<span class="badge deploy">Contract</span>',
+        '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
         '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
-        '🐟 Mid Transfer': '<span class="badge mid">Mid</span>',
+        '🐟 Mid Transfer': '<span class="badge mid">Mid Transfer</span>',
         '🪙 Small Transfer': '<span class="badge small">Small</span>',
-        '🔥 Gas Bomb Detected': `<span class="badge gas">Gas ${gasFormatted} Gwei</span>`,
-        '💱 DEX Router Interaction': `<span class="badge dex">DEX TX</span> ${info.router || ''}`
+        '🔥 Gas Bomb Detected': `<span class="badge gas">Gas Surge</span> ${gasFormatted > 2000 ? '<span class="badge gas">🚨 Severe</span>' : ''}`,
+        '💱 DEX Router Interaction': `<span class="badge dex">DEX Tx</span> ${info.router || ''}`
       };
 
-      const tokenTag = info.token ? `<span class="badge token">${info.token}</span>` : '';
-      const actionTag = info.action ? `<span class="badge ${info.action === 'Buy' ? 'buy' : 'sell'}">${info.action}</span>` : '';
+      const tokenTag = info.token ? `<span class="badge token"><img src="${info.tokenLogo}" class="token-logo"/>${info.token}</span>` : '';
       const walletTag = getTag(tx.from);
+      const directionTag = info.direction ? `<span class="badge ${info.direction === 'buy' ? 'buy' : 'sell'}">${info.direction.toUpperCase()}</span>` : '';
 
       const card = document.createElement('div');
       card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 transition-all duration-100 break-words';
       card.innerHTML = `
-        <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
+        <div class="text-gray-400">${new Date().toLocaleTimeString()}</div>
         <div class="font-semibold flex items-center gap-2">${type}</div>
-        <div class="text-xs mt-1">From: ${tx.from} ${walletTag}</div>
-        <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
-        <div class="text-xs">Value: ${valueFormatted} CRO</div>
-        <div class="text-xs">Gas: ${gasFormatted} Gwei</div>
-        <div class="text-xs mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
-        <div class="mt-2">${tags[type] || ''} ${tokenTag} ${actionTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
+        <div class="mt-1">From: ${tx.from} ${walletTag}</div>
+        <div>To: ${tx.to || '[Contract Creation]'}</div>
+        <div>Value: ${valueFormatted} CRO</div>
+        <div>Gas: ${gasFormatted} Gwei</div>
+        <div class="mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
+        <div class="mt-2">${tags[type] || ''} ${tokenTag} ${directionTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
       `;
       feed.prepend(card);
     }
@@ -122,21 +124,22 @@
         const info = {};
 
         if (knownRouters[to]) {
-          info.token = 'Y2K/USDC'; // Placeholder for DEX Screener
+          info.token = 'Y2K/USDC'; // Static for now — replace with live pairing
+          info.tokenLogo = 'https://assets.coingecko.com/coins/images/29227/small/y2k.png'; // Replace with real match if possible
+          info.direction = val > 0 ? 'buy' : 'sell'; // Simulated
           info.router = `<span class="badge">${knownRouters[to]}</span>`;
-          info.action = tx.from.toLowerCase().includes('dead') ? 'Sell' : 'Buy'; // crude action tag example
         }
 
         if (tx.to === null && filters.deploys) {
           renderEvent('🚀 Contract Deployed', tx);
         } else if (val > 1000 && filters.whales) {
-          renderEvent('🦈 Whale Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
+          renderEvent('🦈 Whale Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO moved` });
         } else if (val > 100 && val <= 1000 && filters.mid) {
           renderEvent('🐟 Mid Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
         } else if (val > 0 && val <= 100 && filters.small) {
           renderEvent('🪙 Small Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
         } else if (gas > 100 && filters.gas) {
-          renderEvent('🔥 Gas Bomb Detected', tx, { ...info });
+          renderEvent('🔥 Gas Bomb Detected', tx, { ...info, tag: `${gas.toLocaleString()} Gwei` });
         } else if (knownRouters[to] && filters.dex) {
           renderEvent('💱 DEX Router Interaction', tx, { ...info, tag: 'Router TX' });
         }
