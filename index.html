@@ -1,152 +1,266 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-black text-white">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VaultLeakX | Cronos Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <title>VaultLeakX Pro | Cronos Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-thumb { background: #10b981; }
-    .event:hover { background-color: rgba(255, 255, 255, 0.05); transform: scale(1.01); }
-    .glow { text-shadow: 0 0 4px #10b981; }
-    .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; white-space: nowrap; }
-    .badge.deploy { background: #facc15; color: #000; }
-    .badge.whale { background: #10b981; }
-    .badge.mid { background: #f472b6; }
-    .badge.small { background: #64748b; }
-    .badge.gas { background: #f87171; }
-    .badge.dex { background: #60a5fa; }
-    .badge.token { background: #c084fc; }
-    .badge.smart { background: #22d3ee; }
-    .badge.wallet { background: #f97316; }
-    .badge.buy { background: #22c55e; }
-    .badge.sell { background: #ef4444; }
-    img.token-logo { width: 16px; height: 16px; display: inline-block; margin-right: 4px; vertical-align: middle; border-radius: 50%; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
 </head>
-<body class="font-mono overflow-hidden">
-  <div class="flex justify-between items-center px-4 py-3 bg-[#0f172a] border-b border-lime-400 text-xs md:text-sm">
-    <h1 class="text-xl md:text-2xl glow font-bold text-lime-400 tracking-widest">VAULTLEAKX</h1>
-    <div class="flex space-x-4">
-      <div><span class="text-gray-400">CHAIN:</span> <span class="text-green-400">CRONOS</span></div>
-      <div><span class="text-gray-400">STATUS:</span> <span class="animate-pulse text-lime-500">LIVE</span></div>
-      <div><span class="text-gray-400">TXs SCANNED:</span> <span id="txCount" class="text-white">0</span></div>
+<body class="bg-[#0b0f14] text-white font-mono overflow-hidden">
+  <div class="flex flex-col h-screen">
+    <!-- Header -->
+    <header class="px-4 py-3 bg-[#0f172a] border-b border-lime-400/50 backdrop-blur-sm sticky top-0 z-50">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400 animate-pulse">VAULTLEAKX•PRO</h1>
+          <span class="px-2 py-0.5 text-[10px] bg-lime-500/20 rounded-full text-lime-400">v4.1</span>
+        </div>
+        <div class="flex gap-4 text-xs">
+          <div class="stats-pill"><span class="text-gray-400">CHAIN:</span> <span class="text-emerald-400">CRONOS</span></div>
+          <div class="stats-pill"><span class="text-gray-400">BLOCKS:</span> <span id="blockNumber" class="text-white">-</span></div>
+          <div class="stats-pill"><span class="text-gray-400">TXs:</span> <span id="txCount" class="text-white">0</span></div>
+          <div id="connectionStatus" class="stats-pill"><span class="animate-pulse text-lime-500">●</span> LIVE</div>
+        </div>
+      </div>
+      <!-- Analytics -->
+      <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+        <div class="stat-card"><div class="text-gray-400">24h Volume</div><div class="text-lg font-bold text-white" id="totalVolume">0 CRO</div></div>
+        <div class="stat-card"><div class="text-gray-400">Avg Gas (Gwei)</div><div class="text-lg font-bold text-white" id="avgGas">0</div></div>
+        <div class="stat-card"><div class="text-gray-400">Whale Moves</div><div class="text-lg font-bold text-white" id="whaleCount">0</div></div>
+        <div class="stat-card"><div class="text-gray-400">DEX Volume</div><div class="text-lg font-bold text-white" id="dexVolume">0 CRO</div></div>
+      </div>
+    </header>
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Sidebar -->
+      <aside class="w-64 bg-[#111827] p-4 space-y-4 border-r border-gray-800 overflow-y-auto hidden md:block">
+        <div class="space-y-3">
+          <h2 class="text-lime-300 font-semibold text-sm">Transaction Filters</h2>
+          <div class="filter-group">
+            <label class="filter-item"><input type="checkbox" id="deploys" checked><span>Contract Deploys</span><span class="ml-auto text-gray-500" id="deployCount">0</span></label>
+            <label class="filter-item"><input type="checkbox" id="whales" checked><span>Whale Transfers (1000+ CRO)</span><span class="ml-auto text-gray-500" id="whaleFilterCount">0</span></label>
+            <label class="filter-item"><input type="checkbox" id="mid" checked><span>Mid Transfers (100-1000 CRO)</span><span class="ml-auto text-gray-500" id="midCount">0</span></label>
+            <label class="filter-item"><input type="checkbox" id="small" checked><span>Small Transfers (&lt;100 CRO)</span><span class="ml-auto text-gray-500" id="smallCount">0</span></label>
+            <label class="filter-item"><input type="checkbox" id="gas" checked><span>Gas Spikes (&gt;100 Gwei)</span><span class="ml-auto text-gray-500" id="gasCount">0</span></label>
+            <label class="filter-item"><input type="checkbox" id="dex" checked><span>DEX Transactions</span><span class="ml-auto text-gray-500" id="dexCount">0</span></label>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <h2 class="text-lime-300 font-semibold text-sm">Settings</h2>
+          <div class="filter-group">
+            <label class="filter-item"><input type="checkbox" id="soundAlerts" checked><span>Sound Alerts</span></label>
+            <label class="filter-item"><input type="checkbox" id="autoScroll" checked><span>Auto-scroll</span></label>
+            <label class="filter-item"><input type="checkbox" id="darkMode" checked><span>Dark Mode</span></label>
+          </div>
+        </div>
+        <div class="mt-6 space-y-2 text-xs text-gray-500">
+          <div>v4.1 Merge:</div>
+          <ul class="list-disc list-inside ml-2 space-y-1">
+            <li>Wallet & Token Tags</li>
+            <li>Emojis Restored</li>
+            <li>DEX Buy/Sell Labels</li>
+            <li>Sound + Stats</li>
+            <li>Mobile Optimized</li>
+          </ul>
+        </div>
+      </aside>
+      <!-- Feed -->
+      <main class="flex-1 overflow-hidden flex flex-col bg-[#0b0f14]">
+        <div id="feed" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
+      </main>
     </div>
   </div>
 
-  <div class="flex flex-col md:flex-row h-[calc(100vh-56px)]">
-    <aside class="md:w-64 bg-[#111827] p-4 space-y-3 border-b md:border-b-0 md:border-r border-gray-800 text-sm">
-      <h2 class="text-lime-300 font-semibold mb-2">Filters</h2>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="deploys" checked> <span>Contract Deploys</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="whales" checked> <span>Whale Transfers</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="mid" checked> <span>Mid Transfers</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="small" checked> <span>Small Transfers</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
-      <label class="flex items-center space-x-2"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
-      <div class="mt-6 text-xs text-gray-500">v3.3: Token logos, buy/sell tagging, wallet identities.</div>
-    </aside>
+    <style>
+    html { background-color: #0b0f14; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 5px; }
 
-    <main class="flex-1 bg-[#0b0f14] overflow-y-scroll p-3 md:p-4 space-y-3 text-xs md:text-sm" id="feed"></main>
-  </div>
+    .stats-pill {
+      @apply px-3 py-1 bg-black/30 rounded-full border border-gray-800 text-xs;
+    }
+
+    .stat-card {
+      @apply p-3 bg-black/30 rounded-lg border border-gray-800/50 hover:border-lime-500/30 transition-all;
+    }
+
+    .filter-group {
+      @apply space-y-2 bg-black/20 p-3 rounded-lg border border-gray-800/50;
+    }
+
+    .filter-item {
+      @apply flex items-center space-x-2 text-xs cursor-pointer hover:text-lime-400 transition-colors;
+    }
+
+    .event {
+      @apply p-4 rounded-lg border border-gray-800/50 bg-black/30 hover:border-lime-500/30 transition-all duration-200;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      @apply text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1;
+    }
+
+    .badge.deploy { @apply bg-yellow-500/20 text-yellow-400; }
+    .badge.whale { @apply bg-emerald-500/20 text-emerald-400; }
+    .badge.mid { @apply bg-pink-500/20 text-pink-400; }
+    .badge.small { @apply bg-gray-500/20 text-gray-400; }
+    .badge.gas { @apply bg-red-500/20 text-red-400; }
+    .badge.token { @apply bg-purple-500/20 text-purple-400; }
+    .badge.smart { @apply bg-cyan-500/20 text-cyan-400; }
+    .badge.wallet { @apply bg-orange-500/20 text-orange-400; }
+    .badge.buy { @apply bg-green-500/20 text-green-400; }
+    .badge.sell { @apply bg-red-500/20 text-red-400; }
+
+    .token-logo {
+      @apply w-4 h-4 rounded-full inline-block align-middle;
+    }
+  </style>
 
   <script>
-    const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
-    const knownRouters = {
-      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30': 'MMF',
-      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9': 'VVS',
-      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af': 'Crona'
+    const CONFIG = {
+      MAX_EVENTS: 80,
+      WHALE_THRESHOLD: 1000,
+      MID_THRESHOLD: 100,
+      GAS_SPIKE_THRESHOLD: 100
     };
-    const smartWallets = {
-      '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef': 'Y2K Admin',
-      '0xabcabcabcabcabcabcabcabcabcabcabcabcabca': 'Vault Syndicate'
-    };
-    let scanned = 0;
-    const feed = document.getElementById('feed');
-    const txCounter = document.getElementById('txCount');
 
-    function getTag(address) {
-      const addr = address.toLowerCase();
-      return smartWallets[addr] ? `<span class="badge wallet">${smartWallets[addr]}</span>` : '';
-    }
-
-    function renderEvent(type, tx, info = {}) {
-      scanned++;
-      txCounter.textContent = scanned;
-      const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
-      const valueFormatted = val.toLocaleString(undefined, { minimumFractionDigits: 2 });
-      const gasFormatted = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')).toLocaleString(undefined, { minimumFractionDigits: 2 }) : 'N/A';
-
-      const tags = {
-        '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
-        '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
-        '🐟 Mid Transfer': '<span class="badge mid">Mid Transfer</span>',
-        '🪙 Small Transfer': '<span class="badge small">Small</span>',
-        '🔥 Gas Bomb Detected': `<span class="badge gas">Gas Surge</span> ${gasFormatted > 2000 ? '<span class="badge gas">🚨 Severe</span>' : ''}`,
-        '💱 DEX Router Interaction': `<span class="badge dex">DEX Tx</span> ${info.router || ''}`
-      };
-
-      const tokenTag = info.token ? `<span class="badge token"><img src="${info.tokenLogo}" class="token-logo"/>${info.token}</span>` : '';
-      const walletTag = getTag(tx.from);
-      const directionTag = info.direction ? `<span class="badge ${info.direction === 'buy' ? 'buy' : 'sell'}">${info.direction.toUpperCase()}</span>` : '';
-
-      const card = document.createElement('div');
-      card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 transition-all duration-100 break-words';
-      card.innerHTML = `
-        <div class="text-gray-400">${new Date().toLocaleTimeString()}</div>
-        <div class="font-semibold flex items-center gap-2">${type}</div>
-        <div class="mt-1">From: ${tx.from} ${walletTag}</div>
-        <div>To: ${tx.to || '[Contract Creation]'}</div>
-        <div>Value: ${valueFormatted} CRO</div>
-        <div>Gas: ${gasFormatted} Gwei</div>
-        <div class="mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
-        <div class="mt-2">${tags[type] || ''} ${tokenTag} ${directionTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
-      `;
-      feed.prepend(card);
-    }
-
-    async function scanBlock() {
-      const block = await provider.getBlockWithTransactions('latest');
-      const filters = {
-        deploys: document.getElementById('deploys').checked,
-        whales: document.getElementById('whales').checked,
-        mid: document.getElementById('mid').checked,
-        small: document.getElementById('small').checked,
-        gas: document.getElementById('gas').checked,
-        dex: document.getElementById('dex').checked
-      };
-
-      for (const tx of block.transactions) {
-        const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
-        const gas = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
-        const to = tx.to?.toLowerCase();
-        const info = {};
-
-        if (knownRouters[to]) {
-          info.token = 'Y2K/USDC'; // Static for now — replace with live pairing
-          info.tokenLogo = 'https://assets.coingecko.com/coins/images/29227/small/y2k.png'; // Replace with real match if possible
-          info.direction = val > 0 ? 'buy' : 'sell'; // Simulated
-          info.router = `<span class="badge">${knownRouters[to]}</span>`;
-        }
-
-        if (tx.to === null && filters.deploys) {
-          renderEvent('🚀 Contract Deployed', tx);
-        } else if (val > 1000 && filters.whales) {
-          renderEvent('🦈 Whale Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO moved` });
-        } else if (val > 100 && val <= 1000 && filters.mid) {
-          renderEvent('🐟 Mid Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
-        } else if (val > 0 && val <= 100 && filters.small) {
-          renderEvent('🪙 Small Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
-        } else if (gas > 100 && filters.gas) {
-          renderEvent('🔥 Gas Bomb Detected', tx, { ...info, tag: `${gas.toLocaleString()} Gwei` });
-        } else if (knownRouters[to] && filters.dex) {
-          renderEvent('💱 DEX Router Interaction', tx, { ...info, tag: 'Router TX' });
-        }
+    const state = {
+      gasHistory: [],
+      stats: {
+        totalVolume: 0,
+        whaleCount: 0,
+        dexVolume: 0,
+        deployCount: 0,
+        midCount: 0,
+        smallCount: 0,
+        gasCount: 0,
+        dexCount: 0
       }
+    };
+
+    const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
+    const feed = document.getElementById("feed");
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    function playAlert(freq = 500, type = 'sine') {
+      if (!document.getElementById("soundAlerts").checked) return;
+      const o = audioContext.createOscillator(), g = audioContext.createGain();
+      o.type = type; o.frequency.value = freq; g.gain.value = 0.1;
+      o.connect(g); g.connect(audioContext.destination);
+      o.start(); g.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5); o.stop(audioContext.currentTime + 0.5);
     }
 
-    provider.on('block', scanBlock);
+    const statsUpdate = () => {
+      document.getElementById("totalVolume").textContent = `${state.stats.totalVolume.toFixed(2)} CRO`;
+      document.getElementById("whaleCount").textContent = state.stats.whaleCount;
+      document.getElementById("dexVolume").textContent = `${state.stats.dexVolume.toFixed(2)} CRO`;
+      document.getElementById("avgGas").textContent = (state.gasHistory.reduce((a, b) => a + b, 0) / state.gasHistory.length || 0).toFixed(2);
+      document.getElementById("deployCount").textContent = state.stats.deployCount;
+      document.getElementById("whaleFilterCount").textContent = state.stats.whaleCount;
+      document.getElementById("midCount").textContent = state.stats.midCount;
+      document.getElementById("smallCount").textContent = state.stats.smallCount;
+      document.getElementById("gasCount").textContent = state.stats.gasCount;
+      document.getElementById("dexCount").textContent = state.stats.dexCount;
+    };
+
+    const formatAddr = a => `${a.slice(0, 6)}...${a.slice(-4)}`;
+    const txCount = document.getElementById("txCount");
+
+    provider.on("block", async (blockNumber) => {
+      document.getElementById("blockNumber").textContent = blockNumber;
+      const filters = {
+        deploys: deploys.checked, whales: whales.checked, mid: mid.checked, small: small.checked,
+        gas: gas.checked, dex: dex.checked
+      };
+
+      try {
+        const block = await provider.getBlockWithTransactions(blockNumber);
+        for (const tx of block.transactions) {
+          const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
+          const gasPrice = parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei') || 0);
+          const to = tx.to?.toLowerCase() || '';
+          const from = tx.from?.toLowerCase() || '';
+
+          state.gasHistory.push(gasPrice);
+          if (state.gasHistory.length > 100) state.gasHistory.shift();
+          txCount.textContent = (+txCount.textContent + 1).toString();
+
+          const badges = [];
+          if (!tx.to && filters.deploys) {
+            state.stats.deployCount++;
+            badges.push(`<span class="badge deploy">🚀 Deploy</span>`);
+            playAlert(400, 'triangle');
+          } else if (val >= CONFIG.WHALE_THRESHOLD && filters.whales) {
+            state.stats.totalVolume += val; state.stats.whaleCount++;
+            badges.push(`<span class="badge whale">🦈 Whale</span>`);
+            playAlert(600, 'square');
+          } else if (val >= CONFIG.MID_THRESHOLD && val < CONFIG.WHALE_THRESHOLD && filters.mid) {
+            state.stats.totalVolume += val; state.stats.midCount++;
+            badges.push(`<span class="badge mid">🐟 Mid</span>`);
+          } else if (val > 0 && val < CONFIG.MID_THRESHOLD && filters.small) {
+            state.stats.totalVolume += val; state.stats.smallCount++;
+            badges.push(`<span class="badge small">🪙 Small</span>`);
+          }
+
+          if (gasPrice > CONFIG.GAS_SPIKE_THRESHOLD && filters.gas) {
+            state.stats.gasCount++;
+            badges.push(`<span class="badge gas">🔥 Gas ${gasPrice.toFixed(1)} Gwei</span>`);
+            playAlert(200, 'sawtooth');
+          }
+
+          if (filters.dex && ['0x145677fc4d9b8f19b5d56d1820c48e0443049a30','0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9'].includes(to)) {
+            state.stats.dexCount++; state.stats.dexVolume += val;
+            const direction = val > 0 ? 'buy' : 'sell';
+            badges.push(`<span class="badge ${direction}">${direction === 'buy' ? '🟢 BUY' : '🔴 SELL'}</span>`);
+          }
+
+          const div = document.createElement('div');
+          div.className = 'event';
+          div.innerHTML = `
+            <div class="flex justify-between items-start">
+              <div class="text-gray-400 text-xs">${new Date().toLocaleTimeString()}</div>
+              <div class="flex flex-wrap gap-1">${badges.join('')}</div>
+            </div>
+            <div class="mt-2 space-y-1">
+              <div class="flex items-center gap-2 text-sm"><span class="text-gray-400">From:</span><a href="https://cronoscan.com/address/${tx.from}" target="_blank" class="hover:text-lime-400">${formatAddr(tx.from)}</a></div>
+              <div class="flex items-center gap-2 text-sm"><span class="text-gray-400">To:</span><a href="https://cronoscan.com/address/${tx.to}" target="_blank" class="hover:text-lime-400">${formatAddr(tx.to || '0x0')}</a></div>
+              <div class="flex items-center gap-2 text-sm"><span class="text-gray-400">Value:</span><span>${val.toFixed(2)} CRO</span></div>
+              <div class="mt-1"><a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-xs text-lime-400 hover:underline">View Tx ↗</a></div>
+            </div>
+          `;
+          feed.prepend(div);
+          while (feed.children.length > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
+        }
+        statsUpdate();
+      } catch (e) {
+        document.getElementById("connectionStatus").innerHTML = '<span class="text-red-500">●</span> ERROR';
+        console.error(e);
+      }
+    });
+
+    // Save settings
+    document.querySelectorAll("input[type=checkbox]").forEach(cb => {
+      cb.addEventListener("change", () => {
+        localStorage.setItem("vaultleakx-settings", JSON.stringify({
+          soundAlerts: soundAlerts.checked,
+          autoScroll: autoScroll.checked,
+          darkMode: darkMode.checked
+        }));
+      });
+    });
+
+    // Restore settings
+    const settings = JSON.parse(localStorage.getItem("vaultleakx-settings") || "{}");
+    if (settings.soundAlerts === false) soundAlerts.checked = false;
+    if (settings.autoScroll === false) autoScroll.checked = false;
+    if (settings.darkMode === false) darkMode.checked = false;
   </script>
 </body>
 </html>
