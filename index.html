@@ -7,11 +7,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: #10b981; }
     .event:hover { background-color: rgba(255, 255, 255, 0.05); transform: scale(1.01); }
     .glow { text-shadow: 0 0 4px #10b981; }
-    .badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; word-wrap: break-word; }
+    .badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; word-wrap: break-word; }
     .badge.deploy { background: #facc15; color: #000; }
     .badge.whale { background: #10b981; }
     .badge.mid { background: #f472b6; }
@@ -23,29 +23,27 @@
     .badge.wallet { background: #f97316; }
   </style>
 </head>
-<body class="font-mono overflow-hidden">
-  <div class="flex justify-between items-center px-6 py-4 bg-[#0f172a] border-b border-lime-400">
-    <h1 class="text-2xl glow font-bold text-lime-400 tracking-widest">VAULTLEAKX</h1>
-    <div class="flex space-x-6 text-xs">
-      <div><span class="text-gray-400">CHAIN:</span> <span class="text-green-400">CRONOS</span></div>
-      <div><span class="text-gray-400">STATUS:</span> <span class="animate-pulse text-lime-500">LIVE</span></div>
-      <div><span class="text-gray-400">TXs SCANNED:</span> <span id="txCount" class="text-white">0</span></div>
-    </div>
-  </div>
+<body class="font-mono">
+  <div class="flex flex-col sm:flex-row h-screen">
+    <header class="w-full sm:w-auto px-4 py-3 bg-[#0f172a] border-b border-lime-400 sm:border-b-0 sm:border-r">
+      <h1 class="text-xl sm:text-2xl glow font-bold text-lime-400 tracking-widest mb-2">VAULTLEAKX</h1>
+      <div class="flex flex-wrap sm:flex-col gap-2 text-xs">
+        <div><span class="text-gray-400">CHAIN:</span> <span class="text-green-400">CRONOS</span></div>
+        <div><span class="text-gray-400">STATUS:</span> <span class="animate-pulse text-lime-500">LIVE</span></div>
+        <div><span class="text-gray-400">TXs:</span> <span id="txCount" class="text-white">0</span></div>
+      </div>
+      <div class="mt-4 space-y-2 text-sm">
+        <h2 class="text-lime-300 font-semibold">Filters</h2>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="deploys" checked> <span>Deploys</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="whales" checked> <span>Whales</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="mid" checked> <span>Mid Transfers</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="small" checked> <span>Small Transfers</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="dex" checked> <span>DEX TXs</span></label>
+      </div>
+    </header>
 
-  <div class="flex h-[calc(100vh-64px)]">
-    <aside class="w-64 bg-[#111827] p-4 space-y-3 border-r border-gray-800">
-      <h2 class="text-lime-300 font-semibold mb-2">Filters</h2>
-      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="deploys" checked> <span>Contract Deploys</span></label>
-      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="whales" checked> <span>Whale Transfers</span></label>
-      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="mid" checked> <span>Mid Transfers</span></label>
-      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="small" checked> <span>Small Transfers</span></label>
-      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
-      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
-      <div class="mt-6 text-xs text-gray-500">v3.1: Token fusion, wallet tags, live stream speed.</div>
-    </aside>
-
-    <main class="flex-1 bg-[#0b0f14] overflow-y-scroll p-4 space-y-3" id="feed"></main>
+    <main class="flex-1 overflow-y-scroll p-3 space-y-3 bg-[#0b0f14]" id="feed"></main>
   </div>
 
   <script>
@@ -60,7 +58,6 @@
       '0xabcabcabcabcabcabcabcabcabcabcabcabcabca': 'Vault Syndicate'
     };
     let scanned = 0;
-
     const feed = document.getElementById('feed');
     const txCounter = document.getElementById('txCount');
 
@@ -77,28 +74,28 @@
       const gasFormatted = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')).toLocaleString(undefined, { minimumFractionDigits: 2 }) : 'N/A';
 
       const tags = {
-        '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
+        '🚀 Contract Deployed': '<span class="badge deploy">Deploy</span>',
         '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
-        '🐟 Mid Transfer': '<span class="badge mid">Mid Transfer</span>',
+        '🐟 Mid Transfer': '<span class="badge mid">Mid</span>',
         '🪙 Small Transfer': '<span class="badge small">Small</span>',
-        '🔥 Gas Bomb Detected': `<span class="badge gas">Gas Surge</span> ${gasFormatted > 2000 ? '<span class="badge gas">🚨 Severe</span>' : ''}`,
-        '💱 DEX Router Interaction': `<span class="badge dex">DEX Tx</span> ${info.router || ''}`
+        '🔥 Gas Bomb Detected': `<span class="badge gas">Gas ${gasFormatted}</span>`,
+        '💱 DEX Router Interaction': `<span class="badge dex">DEX</span> ${info.router || ''}`
       };
 
       const tokenTag = info.token ? `<span class="badge token">${info.token}</span>` : '';
       const walletTag = getTag(tx.from);
 
       const card = document.createElement('div');
-      card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm transition-all duration-100 break-words';
+      card.className = 'event p-3 rounded border border-lime-500 bg-black/20 text-xs sm:text-sm';
       card.innerHTML = `
-        <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
-        <div class="font-semibold flex items-center gap-2">${type}</div>
-        <div class="text-xs mt-1">From: ${tx.from} ${walletTag}</div>
-        <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
-        <div class="text-xs">Value: ${valueFormatted} CRO</div>
-        <div class="text-xs">Gas: ${gasFormatted} Gwei</div>
-        <div class="text-xs mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
-        <div class="mt-2">${tags[type] || ''} ${tokenTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
+        <div class="text-gray-400">${new Date().toLocaleTimeString()}</div>
+        <div class="font-semibold mt-1">${type}</div>
+        <div>From: ${tx.from} ${walletTag}</div>
+        <div>To: ${tx.to || '[Contract Creation]'}</div>
+        <div>Value: ${valueFormatted} CRO</div>
+        <div>Gas: ${gasFormatted} Gwei</div>
+        <div>Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 10)}...</a></div>
+        <div class="mt-1">${tags[type] || ''} ${tokenTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
       `;
       feed.prepend(card);
     }
@@ -121,14 +118,14 @@
         const info = {};
 
         if (knownRouters[to]) {
-          info.token = 'Y2K/USDC'; // Placeholder; soon real data
+          info.token = 'Y2K/USDC';
           info.router = `<span class="badge">${knownRouters[to]}</span>`;
         }
 
         if (tx.to === null && filters.deploys) {
           renderEvent('🚀 Contract Deployed', tx);
         } else if (val > 1000 && filters.whales) {
-          renderEvent('🦈 Whale Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO moved` });
+          renderEvent('🦈 Whale Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
         } else if (val > 100 && val <= 1000 && filters.mid) {
           renderEvent('🐟 Mid Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
         } else if (val > 0 && val <= 100 && filters.small) {
