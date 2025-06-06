@@ -52,6 +52,9 @@
     .badge.wallet { @apply bg-orange-500/20 text-orange-400; }
     .badge.buy { @apply bg-green-500/20 text-green-400; }
     .badge.sell { @apply bg-red-500/20 text-red-400; }
+    .badge {
+  @apply text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1 break-words whitespace-nowrap;
+}
     .token-logo {
       @apply w-4 h-4 rounded-full inline-block align-middle;
     }
@@ -99,10 +102,6 @@
 
 <!-- Main Layout -->
 <div class="flex flex-col h-screen">
-  <!-- Banner -->
-  <div class="bg-gradient-to-r from-lime-500 to-emerald-500 text-xs py-1.5 text-center font-medium tracking-wide">
-    🔥 Limited Time Offer: 50% off Enterprise Plan - <button onclick="togglePremium()" class="underline font-bold">Upgrade Now</button>
-  </div>
 
   <!-- Header -->
   <header class="px-4 py-3 bg-[#0f172a] border-b border-lime-400/50 backdrop-blur-sm sticky top-0 z-40">
@@ -326,21 +325,19 @@
 
   const renderEvent = (label, tx, { tags }) => {
   const el = document.createElement("div");
-  el.className = "event break-words overflow-x-auto text-sm";
-
+  el.className = "event";
   el.innerHTML = `
-    <div class="text-xs flex items-center justify-between">
+    <div class="text-xs flex items-center justify-between flex-wrap gap-2">
       <div class="font-semibold text-lime-400">${label}</div>
-      <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-lime-500 underline text-[10px] hover:text-lime-300">View Tx ↗</a>
+      <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-emerald-400 hover:underline">View Tx ↗</a>
     </div>
-    <div class="mt-2 space-y-1">
-      <div><span class="text-gray-400">From:</span> <a href="https://cronoscan.com/address/${tx.from}" target="_blank" class="hover:text-lime-400">${formatAddr(tx.from)}</a></div>
-      <div><span class="text-gray-400">To:</span> <a href="https://cronoscan.com/address/${tx.to || ''}" target="_blank" class="hover:text-lime-400">${tx.to ? formatAddr(tx.to) : "Contract Creation"}</a></div>
-      <div><span class="text-gray-400">Value:</span> ${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</div>
+    <div class="text-sm mt-2 break-all">
+      From: <span class="text-white">${formatAddr(tx.from)}</span><br/>
+      To: <span class="text-white">${tx.to ? formatAddr(tx.to) : "Contract Creation"}</span><br/>
+      Value: <span class="text-white">${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</span>
     </div>
-    <div class="mt-2 flex flex-wrap gap-2">${tags}</div>
+    <div class="mt-2 flex flex-wrap gap-2 overflow-hidden break-words">${tags}</div>
   `;
-
   feed.prepend(el);
   if (autoScroll.checked) feed.scrollTop = 0;
   if (feed.childElementCount > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
