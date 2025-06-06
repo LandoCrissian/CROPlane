@@ -14,9 +14,10 @@
     .badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; word-wrap: break-word; }
     .badge.deploy { background: #facc15; color: #000; }
     .badge.whale { background: #10b981; }
+    .badge.mid { background: #f472b6; }
+    .badge.small { background: #38bdf8; }
     .badge.gas { background: #f87171; }
     .badge.dex { background: #60a5fa; }
-    .badge.mid { background: #f472b6; }
   </style>
 </head>
 <body class="font-mono overflow-hidden">
@@ -35,6 +36,7 @@
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="deploys" checked> <span>Contract Deploys</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="whales" checked> <span>Whale Transfers</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="mid" checked> <span>Mid Transfers</span></label>
+      <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="small" checked> <span>Small Transfers</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
       <div class="mt-6 text-xs text-gray-500">v2: Verified holders unlock tagging, tracking & deep AI patterning.</div>
@@ -50,6 +52,7 @@
       '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS
       '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // Crona
     ];
+
     let scanned = 0;
     const feed = document.getElementById('feed');
     const txCounter = document.getElementById('txCount');
@@ -57,15 +60,19 @@
     function renderEvent(type, tx, info = {}) {
       scanned++;
       txCounter.textContent = scanned;
+
       const valueFormatted = Number(ethers.utils.formatEther(tx.value || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const gasFormatted = tx.gasPrice ? Number(ethers.utils.formatUnits(tx.gasPrice, 'gwei')).toLocaleString(undefined, { minimumFractionDigits: 2 }) : 'N/A';
+
       const tags = {
         '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
         '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
         '🐟 Mid Transfer': '<span class="badge mid">Mid Transfer</span>',
+        '🧊 Small Transfer': '<span class="badge small">Small Tx</span>',
         '🔥 Gas Bomb Detected': `<span class="badge gas">Gas Surge</span> ${gasFormatted > 2000 ? '<span class="badge gas">🚨 Severe</span>' : ''}`,
         '💱 DEX Router Interaction': '<span class="badge dex">DEX Tx</span>',
       };
+
       const card = document.createElement('div');
       card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm transition-all duration-100 break-words';
       card.innerHTML = `
@@ -87,19 +94,24 @@
         deploys: document.getElementById('deploys').checked,
         whales: document.getElementById('whales').checked,
         mid: document.getElementById('mid').checked,
+        small: document.getElementById('small').checked,
         gas: document.getElementById('gas').checked,
         dex: document.getElementById('dex').checked
       };
+
       block.transactions.forEach(tx => {
         const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
         const gas = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
         const to = tx.to?.toLowerCase();
+
         if (tx.to === null && filters.deploys) {
           renderEvent('🚀 Contract Deployed', tx);
         } else if (val > 1000 && filters.whales) {
           renderEvent('🦈 Whale Transfer', tx, { tag: `${val.toLocaleString()} CRO moved` });
         } else if (val > 100 && val <= 1000 && filters.mid) {
           renderEvent('🐟 Mid Transfer', tx, { tag: `${val.toLocaleString()} CRO` });
+        } else if (val > 0 && val <= 100 && filters.small) {
+          renderEvent('🧊 Small Transfer', tx, { tag: `${val.toLocaleString()} CRO` });
         } else if (gas > 100 && filters.gas) {
           renderEvent('🔥 Gas Bomb Detected', tx, { tag: `${gas.toLocaleString()} Gwei` });
         } else if (knownRouters.includes(to) && filters.dex) {
@@ -108,7 +120,7 @@
       });
     }
 
-    setInterval(scanBlock, 3000);
+    provider.on('block', scanBlock);
   </script>
 </body>
 </html>
