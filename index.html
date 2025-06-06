@@ -3,19 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-  <title>VaultLeakX Pro | Cronos Intelligence</title>
+  <title>VaultLeakX Pro | Enterprise Cronos Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
 </head>
-<body class="bg-[#0b0f14] text-white font-mono overflow-hidden">
+<body class="bg-[#0b0f14] text-white font-['Inter'] overflow-hidden">
+  <!-- Premium Overlay -->
+  <div id="premiumOverlay" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center hidden">
+    <div class="bg-[#111827] p-6 rounded-xl max-w-md w-full mx-4 border border-lime-500/30">
+      <h2 class="text-2xl font-bold text-lime-400 mb-4">🚀 Upgrade to Enterprise</h2>
+      <div class="space-y-3 mb-6">
+        <div class="flex items-start gap-3">
+          <span class="text-lime-400">✓</span>
+          <div>
+            <div class="font-semibold">Real-time Whale Alerts</div>
+            <div class="text-sm text-gray-400">Instant notifications for large transfers</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-lime-400">✓</span>
+          <div>
+            <div class="font-semibold">Smart Contract Analysis</div>
+            <div class="text-sm text-gray-400">Deep insights into deployed contracts</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-lime-400">✓</span>
+          <div>
+            <div class="font-semibold">Trading Bot Integration</div>
+            <div class="text-sm text-gray-400">Automated trading strategies</div>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <button class="w-full bg-gradient-to-r from-lime-500 to-emerald-500 text-white py-3 rounded-lg font-semibold hover:brightness-110 transition-all">
+          Upgrade Now - $99/month
+        </button>
+        <button onclick="togglePremium()" class="w-full bg-transparent border border-gray-700 text-gray-400 py-2 rounded-lg hover:bg-gray-800">
+          Maybe Later
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="flex flex-col h-screen">
+    <!-- Top Banner -->
+    <div class="bg-gradient-to-r from-lime-500 to-emerald-500 text-xs py-1.5 text-center font-medium tracking-wide">
+      🔥 Limited Time Offer: 50% off Enterprise Plan - <button onclick="togglePremium()" class="underline font-bold">Upgrade Now</button>
+    </div>
+    
     <!-- Header -->
-    <header class="px-4 py-3 bg-[#0f172a] border-b border-lime-400/50 backdrop-blur-sm sticky top-0 z-50">
+    <header class="px-4 py-3 bg-[#0f172a] border-b border-lime-400/50 backdrop-blur-sm sticky top-0 z-40">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <h1 class="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400 animate-pulse">VAULTLEAKX•PRO</h1>
-          <span class="px-2 py-0.5 text-[10px] bg-lime-500/20 rounded-full text-lime-400">v4.1</span>
+          <div class="relative">
+            <h1 class="text-xl font-['Orbitron'] tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">VAULTLEAKX•PRO</h1>
+            <div class="absolute -top-1 -right-2 w-2 h-2 bg-lime-400 rounded-full animate-ping"></div>
+          </div>
+          <div class="flex gap-2">
+            <span class="px-2 py-0.5 text-[10px] bg-lime-500/20 rounded-full text-lime-400">ENTERPRISE</span>
+            <span class="px-2 py-0.5 text-[10px] bg-purple-500/20 rounded-full text-purple-400">v4.2</span>
+          </div>
         </div>
         <div class="flex gap-4 text-xs">
           <div class="stats-pill"><span class="text-gray-400">CHAIN:</span> <span class="text-emerald-400">CRONOS</span></div>
@@ -24,28 +73,58 @@
           <div id="connectionStatus" class="stats-pill"><span class="animate-pulse text-lime-500">●</span> LIVE</div>
         </div>
       </div>
-      <!-- Analytics -->
+      <!-- Analytics Panel -->
       <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-        <div class="stat-card"><div class="text-gray-400">24h Volume</div><div class="text-lg font-bold text-white" id="totalVolume">0 CRO</div></div>
-        <div class="stat-card"><div class="text-gray-400">Avg Gas (Gwei)</div><div class="text-lg font-bold text-white" id="avgGas">0</div></div>
-        <div class="stat-card"><div class="text-gray-400">Whale Moves</div><div class="text-lg font-bold text-white" id="whaleCount">0</div></div>
-        <div class="stat-card"><div class="text-gray-400">DEX Volume</div><div class="text-lg font-bold text-white" id="dexVolume">0 CRO</div></div>
+        <div class="stat-card group">
+          <div class="text-gray-400 group-hover:text-lime-400 transition-colors">24h Volume</div>
+          <div class="text-lg font-bold text-white" id="totalVolume">0 CRO</div>
+        </div>
+        <div class="stat-card group">
+          <div class="text-gray-400 group-hover:text-lime-400">Avg Gas (Gwei)</div>
+          <div class="text-lg font-bold text-white" id="avgGas">0</div>
+        </div>
+        <div class="stat-card group">
+          <div class="text-gray-400 group-hover:text-lime-400">Whale Moves</div>
+          <div class="text-lg font-bold text-white" id="whaleCount">0</div>
+        </div>
+        <div class="stat-card group">
+          <div class="text-gray-400 group-hover:text-lime-400">DEX Volume</div>
+          <div class="text-lg font-bold text-white" id="dexVolume">0 CRO</div>
+        </div>
       </div>
     </header>
+
     <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar -->
       <aside class="w-64 bg-[#111827] p-4 space-y-4 border-r border-gray-800 overflow-y-auto hidden md:block">
         <div class="space-y-3">
-          <h2 class="text-lime-300 font-semibold text-sm">Transaction Filters</h2>
+          <div class="flex justify-between items-center">
+            <h2 class="text-lime-300 font-semibold text-sm">Transaction Filters</h2>
+            <button onclick="togglePremium()" class="text-xs text-emerald-400 hover:underline">Upgrade</button>
+          </div>
           <div class="filter-group">
             <label class="filter-item"><input type="checkbox" id="deploys" checked><span>Contract Deploys</span><span class="ml-auto text-gray-500" id="deployCount">0</span></label>
             <label class="filter-item"><input type="checkbox" id="whales" checked><span>Whale Transfers (1000+ CRO)</span><span class="ml-auto text-gray-500" id="whaleFilterCount">0</span></label>
             <label class="filter-item"><input type="checkbox" id="mid" checked><span>Mid Transfers (100-1000 CRO)</span><span class="ml-auto text-gray-500" id="midCount">0</span></label>
             <label class="filter-item"><input type="checkbox" id="small" checked><span>Small Transfers (&lt;100 CRO)</span><span class="ml-auto text-gray-500" id="smallCount">0</span></label>
             <label class="filter-item"><input type="checkbox" id="gas" checked><span>Gas Spikes (&gt;100 Gwei)</span><span class="ml-auto text-gray-500" id="gasCount">0</span></label>
-            <label class="filter-item"><input type="checkbox" id="dex" checked><span>DEX Transactions</span><span class="ml-auto text-gray-500" id="dexCount">0</span></label>
+            <label class="filter-item"><input type="checkbox" id="dex" checked><span>DEX Trades</span><span class="ml-auto text-gray-500" id="dexCount">0</span></label>
           </div>
         </div>
+
+        <div class="space-y-3">
+          <h2 class="text-lime-300 font-semibold text-sm">Enterprise Features</h2>
+          <div class="filter-group opacity-50">
+            <label class="filter-item cursor-not-allowed"><input type="checkbox" disabled><span>Smart Contract Scanner</span></label>
+            <label class="filter-item cursor-not-allowed"><input type="checkbox" disabled><span>Token Sniper</span></label>
+            <label class="filter-item cursor-not-allowed"><input type="checkbox" disabled><span>MEV Protection</span></label>
+            <label class="filter-item cursor-not-allowed"><input type="checkbox" disabled><span>Arbitrage Scanner</span></label>
+            <button onclick="togglePremium()" class="mt-2 w-full py-1.5 bg-gradient-to-r from-lime-500 to-emerald-500 rounded text-xs font-semibold hover:brightness-110">
+              Unlock Features
+            </button>
+          </div>
+        </div>
+
         <div class="space-y-3">
           <h2 class="text-lime-300 font-semibold text-sm">Settings</h2>
           <div class="filter-group">
@@ -54,17 +133,30 @@
             <label class="filter-item"><input type="checkbox" id="darkMode" checked><span>Dark Mode</span></label>
           </div>
         </div>
-        <div class="mt-6 space-y-2 text-xs text-gray-500">
-          <div>v4.1 Merge:</div>
+
+        <div class="mt-6 space-y-2 text-xs">
+          <div class="text-lime-400 font-semibold">v4.2 Updates:</div>
           <ul class="list-disc list-inside ml-2 space-y-1">
-            <li>Wallet & Token Tags</li>
-            <li>Emojis Restored</li>
-            <li>DEX Buy/Sell Labels</li>
-            <li>Sound + Stats</li>
-            <li>Mobile Optimized</li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>
+              Enterprise Features
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>
+              Enhanced UI/UX
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>
+              Smart Contract Analysis
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>
+              Trading Bot Integration
+            </li>
           </ul>
         </div>
       </aside>
+
       <!-- Feed -->
       <main class="flex-1 overflow-hidden flex flex-col bg-[#0b0f14]">
         <div id="feed" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
@@ -72,21 +164,21 @@
     </div>
   </div>
 
-    <style>
+  <style>
     html { background-color: #0b0f14; }
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 5px; }
 
     .stats-pill {
-      @apply px-3 py-1 bg-black/30 rounded-full border border-gray-800 text-xs;
+      @apply px-3 py-1 bg-black/30 rounded-full border border-gray-800 text-xs backdrop-blur-sm hover:border-lime-500/30 transition-all;
     }
 
     .stat-card {
-      @apply p-3 bg-black/30 rounded-lg border border-gray-800/50 hover:border-lime-500/30 transition-all;
+      @apply p-3 bg-black/30 rounded-lg border border-gray-800/50 hover:border-lime-500/30 transition-all backdrop-blur-sm;
     }
 
     .filter-group {
-      @apply space-y-2 bg-black/20 p-3 rounded-lg border border-gray-800/50;
+      @apply space-y-2 bg-black/20 p-3 rounded-lg border border-gray-800/50 backdrop-blur-sm;
     }
 
     .filter-item {
@@ -94,7 +186,7 @@
     }
 
     .event {
-      @apply p-4 rounded-lg border border-gray-800/50 bg-black/30 hover:border-lime-500/30 transition-all duration-200;
+      @apply p-4 rounded-lg border border-gray-800/50 bg-black/30 hover:border-lime-500/30 transition-all duration-200 backdrop-blur-sm;
       animation: slideIn 0.3s ease-out;
     }
 
@@ -117,7 +209,6 @@
     .badge.wallet { @apply bg-orange-500/20 text-orange-400; }
     .badge.buy { @apply bg-green-500/20 text-green-400; }
     .badge.sell { @apply bg-red-500/20 text-red-400; }
-
     .token-logo {
       @apply w-4 h-4 rounded-full inline-block align-middle;
     }
@@ -144,6 +235,19 @@
         dexCount: 0
       }
     };
+
+    function togglePremium() {
+      const overlay = document.getElementById('premiumOverlay');
+      overlay.classList.toggle('hidden');
+    }
+
+    // Show premium overlay after 45 seconds if not already shown
+    setTimeout(() => {
+      if (!localStorage.getItem('premium-shown')) {
+        togglePremium();
+        localStorage.setItem('premium-shown', 'true');
+      }
+    }, 45000);
 
     const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
     const feed = document.getElementById("feed");
@@ -192,51 +296,44 @@
           if (state.gasHistory.length > 100) state.gasHistory.shift();
           txCount.textContent = (+txCount.textContent + 1).toString();
 
-          const badges = [];
+          let badges = "";
           if (!tx.to && filters.deploys) {
             state.stats.deployCount++;
-            badges.push(`<span class="badge deploy">🚀 Deploy</span>`);
+            badges += `<span class="badge deploy">🚀 Deploy</span>`;
             playAlert(400, 'triangle');
+            renderEvent("🚀 Contract Deployed", tx, { tags: badges });
           } else if (val >= CONFIG.WHALE_THRESHOLD && filters.whales) {
-            state.stats.totalVolume += val; state.stats.whaleCount++;
-            badges.push(`<span class="badge whale">🦈 Whale</span>`);
+            state.stats.totalVolume += val;
+            state.stats.whaleCount++;
+            badges += `<span class="badge whale">🦈 Whale</span>`;
             playAlert(600, 'square');
+            renderEvent("🦈 Whale Transfer", tx, { tags: badges });
           } else if (val >= CONFIG.MID_THRESHOLD && val < CONFIG.WHALE_THRESHOLD && filters.mid) {
-            state.stats.totalVolume += val; state.stats.midCount++;
-            badges.push(`<span class="badge mid">🐟 Mid</span>`);
+            state.stats.totalVolume += val;
+            state.stats.midCount++;
+            badges += `<span class="badge mid">🐟 Mid</span>`;
+            renderEvent("🐟 Mid Transfer", tx, { tags: badges });
           } else if (val > 0 && val < CONFIG.MID_THRESHOLD && filters.small) {
-            state.stats.totalVolume += val; state.stats.smallCount++;
-            badges.push(`<span class="badge small">🪙 Small</span>`);
+            state.stats.totalVolume += val;
+            state.stats.smallCount++;
+            badges += `<span class="badge small">🪙 Small</span>`;
+            renderEvent("🪙 Small Transfer", tx, { tags: badges });
           }
 
           if (gasPrice > CONFIG.GAS_SPIKE_THRESHOLD && filters.gas) {
             state.stats.gasCount++;
-            badges.push(`<span class="badge gas">🔥 Gas ${gasPrice.toFixed(1)} Gwei</span>`);
+            badges += `<span class="badge gas">🔥 Gas ${gasPrice.toFixed(1)} Gwei</span>`;
             playAlert(200, 'sawtooth');
+            renderEvent("🔥 Gas Bomb Detected", tx, { tags: badges });
           }
 
           if (filters.dex && ['0x145677fc4d9b8f19b5d56d1820c48e0443049a30','0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9'].includes(to)) {
-            state.stats.dexCount++; state.stats.dexVolume += val;
+            state.stats.dexCount++;
+            state.stats.dexVolume += val;
             const direction = val > 0 ? 'buy' : 'sell';
-            badges.push(`<span class="badge ${direction}">${direction === 'buy' ? '🟢 BUY' : '🔴 SELL'}</span>`);
+            badges += `<span class="badge dex">💱 ${knownRouters[to]}</span><span class="badge ${direction}">${direction === 'buy' ? '🟢 BUY' : '🔴 SELL'}</span>`;
+            renderEvent("💱 DEX Router Interaction", tx, { tags: badges });
           }
-
-          const div = document.createElement('div');
-          div.className = 'event';
-          div.innerHTML = `
-            <div class="flex justify-between items-start">
-              <div class="text-gray-400 text-xs">${new Date().toLocaleTimeString()}</div>
-              <div class="flex flex-wrap gap-1">${badges.join('')}</div>
-            </div>
-            <div class="mt-2 space-y-1">
-              <div class="flex items-center gap-2 text-sm"><span class="text-gray-400">From:</span><a href="https://cronoscan.com/address/${tx.from}" target="_blank" class="hover:text-lime-400">${formatAddr(tx.from)}</a></div>
-              <div class="flex items-center gap-2 text-sm"><span class="text-gray-400">To:</span><a href="https://cronoscan.com/address/${tx.to}" target="_blank" class="hover:text-lime-400">${formatAddr(tx.to || '0x0')}</a></div>
-              <div class="flex items-center gap-2 text-sm"><span class="text-gray-400">Value:</span><span>${val.toFixed(2)} CRO</span></div>
-              <div class="mt-1"><a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-xs text-lime-400 hover:underline">View Tx ↗</a></div>
-            </div>
-          `;
-          feed.prepend(div);
-          while (feed.children.length > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
         }
         statsUpdate();
       } catch (e) {
