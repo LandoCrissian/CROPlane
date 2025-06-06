@@ -20,6 +20,7 @@
     .badge.dex { background: #60a5fa; }
     .badge.token { background: #c084fc; }
     .badge.smart { background: #22d3ee; }
+    .badge.wallet { background: #f97316; }
   </style>
 </head>
 <body class="font-mono overflow-hidden">
@@ -41,7 +42,7 @@
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="small" checked> <span>Small Transfers</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="gas" checked> <span>Gas Bombs</span></label>
       <label class="flex items-center space-x-2 text-sm"><input type="checkbox" id="dex" checked> <span>DEX Router TXs</span></label>
-      <div class="mt-6 text-xs text-gray-500">v3: Token tags, smart wallet detection, and more.</div>
+      <div class="mt-6 text-xs text-gray-500">v3.1: Token fusion, wallet tags, live stream speed.</div>
     </aside>
 
     <main class="flex-1 bg-[#0b0f14] overflow-y-scroll p-4 space-y-3" id="feed"></main>
@@ -49,15 +50,24 @@
 
   <script>
     const provider = new ethers.providers.JsonRpcProvider('https://evm.cronos.org');
-    const knownRouters = [
-      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30', // MMF
-      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9', // VVS
-      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af'  // Crona
-    ];
-    const smartWallets = ['0xdeadbeef...']; // Add custom addresses to tag
+    const knownRouters = {
+      '0x145677fc4d9b8f19b5d56d1820c48e0443049a30': 'MMF',
+      '0x5ae401dcf3f8b7786d0562ea84b6f572a3b5e5d9': 'VVS',
+      '0x3fb2f35b4b947b975f2b3e6a01989b1a98ae88af': 'Crona'
+    };
+    const smartWallets = {
+      '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef': 'Y2K Admin',
+      '0xabcabcabcabcabcabcabcabcabcabcabcabcabca': 'Vault Syndicate'
+    };
     let scanned = 0;
+
     const feed = document.getElementById('feed');
     const txCounter = document.getElementById('txCount');
+
+    function getTag(address) {
+      const addr = address.toLowerCase();
+      return smartWallets[addr] ? `<span class="badge wallet">${smartWallets[addr]}</span>` : '';
+    }
 
     function renderEvent(type, tx, info = {}) {
       scanned++;
@@ -65,28 +75,30 @@
       const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
       const valueFormatted = val.toLocaleString(undefined, { minimumFractionDigits: 2 });
       const gasFormatted = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')).toLocaleString(undefined, { minimumFractionDigits: 2 }) : 'N/A';
+
       const tags = {
         '🚀 Contract Deployed': '<span class="badge deploy">Contract Deploy</span>',
         '🦈 Whale Transfer': '<span class="badge whale">Whale</span>',
         '🐟 Mid Transfer': '<span class="badge mid">Mid Transfer</span>',
         '🪙 Small Transfer': '<span class="badge small">Small</span>',
         '🔥 Gas Bomb Detected': `<span class="badge gas">Gas Surge</span> ${gasFormatted > 2000 ? '<span class="badge gas">🚨 Severe</span>' : ''}`,
-        '💱 DEX Router Interaction': '<span class="badge dex">DEX Tx</span>',
+        '💱 DEX Router Interaction': `<span class="badge dex">DEX Tx</span> ${info.router || ''}`
       };
-      const smartTag = smartWallets.includes(tx.from.toLowerCase()) ? '<span class="badge smart">Smart Wallet</span>' : '';
+
       const tokenTag = info.token ? `<span class="badge token">${info.token}</span>` : '';
+      const walletTag = getTag(tx.from);
 
       const card = document.createElement('div');
       card.className = 'event p-3 rounded-lg border border-lime-500 bg-black/20 text-sm transition-all duration-100 break-words';
       card.innerHTML = `
         <div class="text-xs text-gray-400">${new Date().toLocaleTimeString()}</div>
         <div class="font-semibold flex items-center gap-2">${type}</div>
-        <div class="text-xs mt-1">From: ${tx.from}</div>
+        <div class="text-xs mt-1">From: ${tx.from} ${walletTag}</div>
         <div class="text-xs">To: ${tx.to || '[Contract Creation]'}</div>
         <div class="text-xs">Value: ${valueFormatted} CRO</div>
         <div class="text-xs">Gas: ${gasFormatted} Gwei</div>
         <div class="text-xs mt-1">Tx: <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="underline text-lime-300">${tx.hash.slice(0, 12)}...</a></div>
-        <div class="mt-2">${tags[type] || ''} ${tokenTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''} ${smartTag}</div>
+        <div class="mt-2">${tags[type] || ''} ${tokenTag} ${info.tag ? `<span class="badge">${info.tag}</span>` : ''}</div>
       `;
       feed.prepend(card);
     }
@@ -101,15 +113,16 @@
         gas: document.getElementById('gas').checked,
         dex: document.getElementById('dex').checked
       };
-      block.transactions.forEach(tx => {
+
+      for (const tx of block.transactions) {
         const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
         const gas = tx.gasPrice ? parseFloat(ethers.utils.formatUnits(tx.gasPrice, 'gwei')) : 0;
         const to = tx.to?.toLowerCase();
         const info = {};
 
-        // Simulated token tagging (DEX Screener fusion will pull this live later)
-        if (knownRouters.includes(to)) {
-          info.token = 'Y2K-USDC'; // Placeholder
+        if (knownRouters[to]) {
+          info.token = 'Y2K/USDC'; // Placeholder; soon real data
+          info.router = `<span class="badge">${knownRouters[to]}</span>`;
         }
 
         if (tx.to === null && filters.deploys) {
@@ -122,10 +135,10 @@
           renderEvent('🪙 Small Transfer', tx, { ...info, tag: `${val.toLocaleString()} CRO` });
         } else if (gas > 100 && filters.gas) {
           renderEvent('🔥 Gas Bomb Detected', tx, { ...info, tag: `${gas.toLocaleString()} Gwei` });
-        } else if (knownRouters.includes(to) && filters.dex) {
+        } else if (knownRouters[to] && filters.dex) {
           renderEvent('💱 DEX Router Interaction', tx, { ...info, tag: 'Router TX' });
         }
-      });
+      }
     }
 
     provider.on('block', scanBlock);
