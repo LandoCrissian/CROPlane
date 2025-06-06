@@ -265,6 +265,10 @@
   .token-logo {
     @apply w-4 h-4 rounded-full inline-block align-middle;
   }
+  .event {
+  word-wrap: break-word;
+  word-break: break-word;
+}
 </style>
 
   <script>
@@ -321,24 +325,26 @@
   };
 
   const renderEvent = (label, tx, { tags }) => {
-    const el = document.createElement("div");
-    el.className = "event";
-    el.innerHTML = `
-      <div class="text-xs flex items-center justify-between">
-        <div class="font-semibold text-lime-400">${label}</div>
-        <div class="text-gray-400">${tx.hash.slice(0, 10)}...</div>
-      </div>
-      <div class="text-sm mt-2">
-        From: <span class="text-white">${formatAddr(tx.from)}</span><br/>
-        To: <span class="text-white">${tx.to ? formatAddr(tx.to) : "Contract Creation"}</span><br/>
-        Value: <span class="text-white">${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</span>
-      </div>
-      <div class="mt-2 flex flex-wrap gap-2">${tags}</div>
-    `;
-    feed.prepend(el);
-    if (autoScroll.checked) feed.scrollTop = 0;
-    if (feed.childElementCount > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
-  };
+  const el = document.createElement("div");
+  el.className = "event break-words overflow-x-auto text-sm";
+
+  el.innerHTML = `
+    <div class="text-xs flex items-center justify-between">
+      <div class="font-semibold text-lime-400">${label}</div>
+      <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-lime-500 underline text-[10px] hover:text-lime-300">View Tx ↗</a>
+    </div>
+    <div class="mt-2 space-y-1">
+      <div><span class="text-gray-400">From:</span> <a href="https://cronoscan.com/address/${tx.from}" target="_blank" class="hover:text-lime-400">${formatAddr(tx.from)}</a></div>
+      <div><span class="text-gray-400">To:</span> <a href="https://cronoscan.com/address/${tx.to || ''}" target="_blank" class="hover:text-lime-400">${tx.to ? formatAddr(tx.to) : "Contract Creation"}</a></div>
+      <div><span class="text-gray-400">Value:</span> ${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</div>
+    </div>
+    <div class="mt-2 flex flex-wrap gap-2">${tags}</div>
+  `;
+
+  feed.prepend(el);
+  if (autoScroll.checked) feed.scrollTop = 0;
+  if (feed.childElementCount > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
+};
 
   const statsUpdate = () => {
     document.getElementById("totalVolume").textContent = `${state.stats.totalVolume.toFixed(2)} CRO`;
