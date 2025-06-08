@@ -7,161 +7,139 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    html, body {
-      background-color: #0b0f14;
-      max-width: 100vw;
-      overflow-x: hidden;
-    }
-
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 5px; }
-
-    .stats-pill {
-      @apply px-3 py-1 bg-black/30 rounded-full border border-gray-800 text-xs backdrop-blur-sm hover:border-lime-500/30 transition-all;
-    }
-
-    .stat-card {
-      @apply p-3 bg-black/30 rounded-lg border border-gray-800/50 hover:border-lime-500/30 transition-all backdrop-blur-sm;
-    }
-
-    .filter-group {
-      @apply space-y-2 bg-black/20 p-3 rounded-lg border border-gray-800/50 backdrop-blur-sm;
-    }
-
-    .filter-item {
-      @apply flex items-center space-x-2 text-xs cursor-pointer hover:text-lime-400 transition-colors;
-    }
-
-    .event {
-      @apply p-4 rounded-lg border border-gray-800/50 bg-black/30 hover:border-lime-500/30 transition-all duration-200 backdrop-blur-sm;
-      animation: slideIn 0.3s ease-out;
-      word-break: break-word;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .badge {
-      @apply text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1;
-      white-space: nowrap;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .badge.deploy { @apply bg-yellow-500/20 text-yellow-400; }
-    .badge.whale { @apply bg-emerald-500/20 text-emerald-400; }
-    .badge.mid { @apply bg-pink-500/20 text-pink-400; }
-    .badge.small { @apply bg-gray-500/20 text-gray-400; }
-    .badge.gas { @apply bg-red-500/20 text-red-400; }
-    .badge.dex { @apply bg-purple-500/20 text-purple-400; }
-    .badge.buy { @apply bg-green-500/20 text-green-400; }
-    .badge.sell { @apply bg-red-500/20 text-red-400; }
-
-    .token-logo {
-      @apply w-4 h-4 rounded-full inline-block align-middle mr-1;
-    }
-  </style>
 </head>
-<body class="bg-[#0b0f14] text-white font-['Inter'] overflow-hidden">
+<body class="bg-[#0b0f14] text-white font-['Inter']">
+  <!-- Bottom Settings Panel (Mobile) -->
+  <div id="settingsPanel" class="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-gray-800 p-4 transform translate-y-full transition-transform duration-300 z-50 rounded-t-xl md:hidden">
+    <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-4"></div>
+    <div class="space-y-4">
+      <h2 class="text-lime-300 font-semibold">Settings</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex items-center space-x-2 text-sm">
+          <input type="checkbox" id="soundAlerts" checked>
+          <span>Sound Alerts</span>
+        </label>
+        <label class="flex items-center space-x-2 text-sm">
+          <input type="checkbox" id="autoScroll" checked>
+          <span>Auto-scroll</span>
+        </label>
+        <label class="flex items-center space-x-2 text-sm">
+          <input type="checkbox" id="darkMode" checked>
+          <span>Dark Mode</span>
+        </label>
+      </div>
+      <div class="filter-group mt-4">
+        <h2 class="text-lime-300 font-semibold mb-2">Transaction Filters</h2>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="filter-item"><input type="checkbox" id="deploys" checked><span>Deploys</span></label>
+          <label class="filter-item"><input type="checkbox" id="whales" checked><span>Whales</span></label>
+          <label class="filter-item"><input type="checkbox" id="mid" checked><span>Mid</span></label>
+          <label class="filter-item"><input type="checkbox" id="small" checked><span>Small</span></label>
+          <label class="filter-item"><input type="checkbox" id="gas" checked><span>Gas</span></label>
+          <label class="filter-item"><input type="checkbox" id="dex" checked><span>DEX</span></label>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Layout -->
-<div class="flex flex-col h-screen">
-  <!-- Header -->
-  <header class="px-4 py-3 bg-[#0f172a] border-b border-lime-400/50 backdrop-blur-sm sticky top-0 z-40">
-    <div class="flex flex-wrap justify-between items-center gap-y-2">
-      <div class="flex items-center gap-2">
-        <div class="relative">
-          <h1 class="text-xl font-['Orbitron'] tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">VAULTLEAKX•PRO</h1>
-          <div class="absolute -top-1 -right-2 w-2 h-2 bg-lime-400 rounded-full animate-ping"></div>
+  <div class="flex flex-col h-screen">
+    <!-- Header -->
+    <header class="px-4 py-3 bg-[#0f172a] border-b border-lime-400/50 backdrop-blur-sm sticky top-0 z-40">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <h1 class="text-lg font-['Orbitron'] tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">VAULTLEAKX•PRO</h1>
+            <div class="absolute -top-1 -right-2 w-2 h-2 bg-lime-400 rounded-full animate-ping"></div>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <span class="px-2 py-0.5 text-[10px] bg-lime-500/20 rounded-full text-lime-400">ENTERPRISE</span>
-          <span class="px-2 py-0.5 text-[10px] bg-purple-500/20 rounded-full text-purple-400">v4.3</span>
+        <div class="flex items-center gap-2">
+          <button id="toggleSettings" class="text-lime-400 text-sm">
+            ⚙️
+          </button>
         </div>
       </div>
-      <div class="flex gap-4 text-xs">
-        <div class="stats-pill"><span class="text-gray-400">CHAIN:</span> <span class="text-emerald-400">CRONOS</span></div>
-        <div class="stats-pill"><span class="text-gray-400">BLOCKS:</span> <span id="blockNumber" class="text-white">-</span></div>
-        <div class="stats-pill"><span class="text-gray-400">TXs:</span> <span id="txCount" class="text-white">0</span></div>
-        <div id="connectionStatus" class="stats-pill"><span class="animate-pulse text-lime-500">●</span> LIVE</div>
-      </div>
-    </div>
-    <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-      <div class="stat-card group">
-        <div class="text-gray-400 group-hover:text-lime-400">24h Volume</div>
-        <div class="text-lg font-bold text-white" id="totalVolume">0 CRO</div>
-      </div>
-      <div class="stat-card group">
-        <div class="text-gray-400 group-hover:text-lime-400">Avg Gas (Gwei)</div>
-        <div class="text-lg font-bold text-white" id="avgGas">0</div>
-      </div>
-      <div class="stat-card group">
-        <div class="text-gray-400 group-hover:text-lime-400">Whale Moves</div>
-        <div class="text-lg font-bold text-white" id="whaleCount">0</div>
-      </div>
-      <div class="stat-card group">
-        <div class="text-gray-400 group-hover:text-lime-400">DEX Volume</div>
-        <div class="text-lg font-bold text-white" id="dexVolume">0 CRO</div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main View -->
-  <div class="flex flex-1 overflow-hidden">
-    <!-- Sidebar -->
-    <aside id="sidebarPanel" class="w-64 bg-[#111827] p-4 space-y-4 border-r border-gray-800 overflow-y-auto fixed top-0 left-0 h-screen z-50 transform -translate-x-full transition-transform md:translate-x-0 md:static md:block">
-      <div class="space-y-3">
-        <div class="flex justify-between items-center">
-          <h2 class="text-lime-300 font-semibold text-sm">Transaction Filters</h2>
-        </div>
-        <div class="filter-group">
-          <label class="filter-item"><input type="checkbox" id="deploys" checked><span>Contract Deploys</span><span class="ml-auto text-gray-500" id="deployCount">0</span></label>
-          <label class="filter-item"><input type="checkbox" id="whales" checked><span>Whale Transfers (1000+ CRO)</span><span class="ml-auto text-gray-500" id="whaleFilterCount">0</span></label>
-          <label class="filter-item"><input type="checkbox" id="mid" checked><span>Mid Transfers (100-1000 CRO)</span><span class="ml-auto text-gray-500" id="midCount">0</span></label>
-          <label class="filter-item"><input type="checkbox" id="small" checked><span>Small Transfers (&lt;100 CRO)</span><span class="ml-auto text-gray-500" id="smallCount">0</span></label>
-          <label class="filter-item"><input type="checkbox" id="gas" checked><span>Gas Spikes (&gt;100 Gwei)</span><span class="ml-auto text-gray-500" id="gasCount">0</span></label>
-          <label class="filter-item"><input type="checkbox" id="dex" checked><span>DEX Trades</span><span class="ml-auto text-gray-500" id="dexCount">0</span></label>
-        </div>
+      
+      <div class="mt-2 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div class="stats-pill whitespace-nowrap"><span class="text-gray-400">CHAIN:</span> <span class="text-emerald-400">CRONOS</span></div>
+        <div class="stats-pill whitespace-nowrap"><span class="text-gray-400">BLOCKS:</span> <span id="blockNumber" class="text-white">-</span></div>
+        <div class="stats-pill whitespace-nowrap"><span class="text-gray-400">TXs:</span> <span id="txCount" class="text-white">0</span></div>
+        <div id="connectionStatus" class="stats-pill whitespace-nowrap"><span class="animate-pulse text-lime-500">●</span> LIVE</div>
       </div>
 
-      <div class="space-y-3">
-        <h2 class="text-lime-300 font-semibold text-sm">Settings</h2>
-        <div class="filter-group">
-          <label class="filter-item"><input type="checkbox" id="soundAlerts" checked><span>Sound Alerts</span></label>
-          <label class="filter-item"><input type="checkbox" id="autoScroll" checked><span>Auto-scroll</span></label>
-          <label class="filter-item"><input type="checkbox" id="darkMode" checked><span>Dark Mode</span></label>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div class="stat-card">
+          <div class="text-gray-400">24h Vol</div>
+          <div class="text-sm font-bold text-white" id="totalVolume">0 CRO</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-gray-400">Gas</div>
+          <div class="text-sm font-bold text-white" id="avgGas">0</div>
         </div>
       </div>
-
-      <div class="mt-6 space-y-2 text-xs">
-        <div class="text-lime-400 font-semibold">v4.3 Updates:</div>
-        <ul class="list-disc list-inside ml-2 space-y-1">
-          <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>DEX Trade Badge Fix</li>
-          <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>Auto Token Logo</li>
-          <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-lime-400 rounded-full"></span>Full Mobile Fix</li>
-        </ul>
-      </div>
-    </aside>
+    </header>
 
     <!-- Feed Viewer -->
-    <main class="flex-1 overflow-hidden flex flex-col bg-[#0b0f14]">
-      <div id="feed" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
-    </main>
+    <main class="flex-1 overflow-y-auto p-3 space-y-3" id="feed"></main>
   </div>
-</div>
 
-  <!-- Mobile Sidebar Toggle -->
-<div class="md:hidden flex justify-end mt-2">
-  <button id="toggleSidebar" class="text-lime-400 border border-lime-400 px-3 py-1 rounded-md text-xs">
-    ☰ Filters / Settings
-  </button>
-</div>
+<style>
+  html { 
+    background-color: #0b0f14; 
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .stats-pill {
+    @apply px-3 py-1 bg-black/30 rounded-full border border-gray-800 text-xs backdrop-blur-sm;
+  }
 
-  <script>
+  .stat-card {
+    @apply p-3 bg-black/30 rounded-lg border border-gray-800/50 backdrop-blur-sm;
+  }
+
+  .filter-item {
+    @apply flex items-center space-x-2 text-sm cursor-pointer hover:text-lime-400 transition-colors;
+  }
+
+  .event {
+    @apply p-4 rounded-lg border border-gray-800/50 bg-black/30 backdrop-blur-sm;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .badge {
+    @apply text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1;
+    white-space: nowrap;
+  }
+
+  .badge.deploy { @apply bg-yellow-500/20 text-yellow-400; }
+  .badge.whale { @apply bg-emerald-500/20 text-emerald-400; }
+  .badge.mid { @apply bg-pink-500/20 text-pink-400; }
+  .badge.small { @apply bg-gray-500/20 text-gray-400; }
+  .badge.gas { @apply bg-red-500/20 text-red-400; }
+  .badge.dex { @apply bg-purple-500/20 text-purple-400; }
+  .badge.buy { @apply bg-green-500/20 text-green-400; }
+  .badge.sell { @apply bg-red-500/20 text-red-400; }
+
+  .token-logo {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 4px;
+    background: rgba(255,255,255,0.1);
+  }
+</style>
+
+<script>
 const CONFIG = {
   MAX_EVENTS: 100,
   WHALE_THRESHOLD: 1000,
@@ -176,9 +154,43 @@ const knownRouters = {
   "0x5c4af5a3102641cf4c7322a1d8e7896b3aea1d3c": "CorgiSwap"
 };
 
+let settingsPanelVisible = false;
 const provider = new ethers.providers.JsonRpcProvider("https://evm.cronos.org");
 const feed = document.getElementById("feed");
 const txCount = document.getElementById("txCount");
+const settingsPanel = document.getElementById("settingsPanel");
+
+document.getElementById("toggleSettings").addEventListener("click", () => {
+  settingsPanelVisible = !settingsPanelVisible;
+  settingsPanel.style.transform = settingsPanelVisible ? "translateY(0)" : "translateY(100%)";
+});
+
+// Touch handling for settings panel
+let touchStartY = 0;
+let touchMoveY = 0;
+
+settingsPanel.addEventListener("touchstart", (e) => {
+  touchStartY = e.touches[0].clientY;
+});
+
+settingsPanel.addEventListener("touchmove", (e) => {
+  touchMoveY = e.touches[0].clientY;
+  const delta = touchMoveY - touchStartY;
+  if (delta > 0) { // Only allow dragging down
+    settingsPanel.style.transform = `translateY(${delta}px)`;
+    e.preventDefault();
+  }
+});
+
+settingsPanel.addEventListener("touchend", () => {
+  const delta = touchMoveY - touchStartY;
+  if (delta > 70) { // If dragged down more than 70px, close the panel
+    settingsPanel.style.transform = "translateY(100%)";
+    settingsPanelVisible = false;
+  } else {
+    settingsPanel.style.transform = "translateY(0)";
+  }
+});
 
 const state = {
   gasHistory: [],
@@ -195,8 +207,16 @@ const state = {
 };
 
 const formatAddr = (addr) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-const getTokenLogo = (addr) =>
-  `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${addr}/logo.png`;
+
+const getTokenLogo = async (addr) => {
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${addr}/logo.png`);
+    if (res.ok) {
+      return res.url;
+    }
+  } catch (e) {}
+  return null;
+};
 
 const playAlert = (hz, type) => {
   if (!soundAlerts?.checked) return;
@@ -219,45 +239,45 @@ const renderEvent = async (label, tx, { tags }) => {
 
   let tokenLogo = "";
   if (tx.to) {
-    const logoUrl = getTokenLogo(tx.to);
-    try {
-      const res = await fetch(logoUrl);
-      if (res.ok) {
-        tokenLogo = `<img src="${logoUrl}" alt="logo" class="token-logo" onerror="this.remove()">`;
-      }
-    } catch (e) {}
+    const logoUrl = await getTokenLogo(tx.to);
+    if (logoUrl) {
+      tokenLogo = `<img src="${logoUrl}" alt="token" class="token-logo" onerror="this.style.display='none'">`;
+    }
   }
 
+  const value = parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2);
+  const isBuy = tx.value.gt(0);
+
   el.innerHTML = `
-    <div class="text-xs flex items-center justify-between flex-wrap gap-2">
-      <div class="font-semibold text-lime-400">${label}</div>
-      <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-emerald-400 hover:underline">View Tx ↗</a>
+    <div class="text-xs flex items-center justify-between">
+      <div class="font-semibold text-lime-400 flex items-center">
+        ${tokenLogo}${label}
+      </div>
+      <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-emerald-400 hover:underline">View ↗</a>
     </div>
-    <div class="text-sm mt-2 break-all">
-      From: <span class="text-white">${formatAddr(tx.from)}</span><br/>
-      To: <span class="text-white">${formatAddr(tx.to || "")}</span> ${tokenLogo}<br/>
-      Value: <span class="text-white">${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</span>
+    <div class="text-xs mt-2">
+      <div class="flex justify-between">
+        <span>From: <span class="text-white">${formatAddr(tx.from)}</span></span>
+        <span class="badge ${isBuy ? 'buy' : 'sell'}">${isBuy ? '🟢 BUY' : '🔴 SELL'}</span>
+      </div>
+      <div>To: <span class="text-white">${formatAddr(tx.to || "")}</span></div>
+      <div>Value: <span class="text-white">${value} CRO</span></div>
     </div>
-    <div class="mt-2 flex flex-wrap gap-2">${tags}</div>
+    <div class="mt-2 flex flex-wrap gap-1">${tags}</div>
   `;
+
   feed.prepend(el);
   if (autoScroll?.checked) feed.scrollTop = 0;
-  if (feed.childElementCount > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
+  if (feed.childElementCount > CONFIG.MAX_EVENTS) {
+    feed.removeChild(feed.lastChild);
+  }
 };
 
 const statsUpdate = () => {
   document.getElementById("totalVolume").textContent = `${state.stats.totalVolume.toFixed(2)} CRO`;
-  document.getElementById("whaleCount").textContent = state.stats.whaleCount;
-  document.getElementById("dexVolume").textContent = `${state.stats.dexVolume.toFixed(2)} CRO`;
   document.getElementById("avgGas").textContent = (
     state.gasHistory.reduce((a, b) => a + b, 0) / state.gasHistory.length || 0
-  ).toFixed(2);
-  document.getElementById("deployCount").textContent = state.stats.deployCount;
-  document.getElementById("whaleFilterCount").textContent = state.stats.whaleCount;
-  document.getElementById("midCount").textContent = state.stats.midCount;
-  document.getElementById("smallCount").textContent = state.stats.smallCount;
-  document.getElementById("gasCount").textContent = state.stats.gasCount;
-  document.getElementById("dexCount").textContent = state.stats.dexCount;
+  ).toFixed(1);
 };
 
 provider.on("block", async (blockNumber) => {
@@ -278,7 +298,6 @@ provider.on("block", async (blockNumber) => {
       const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
       const gasPrice = parseFloat(ethers.utils.formatUnits(tx.gasPrice, "gwei") || 0);
       const to = tx.to?.toLowerCase() || "";
-      const from = tx.from?.toLowerCase() || "";
       let tags = "";
 
       state.gasHistory.push(gasPrice);
@@ -289,7 +308,7 @@ provider.on("block", async (blockNumber) => {
         state.stats.deployCount++;
         tags += `<span class="badge deploy">🚀 Deploy</span>`;
         playAlert(400, "triangle");
-        await renderEvent("🚀 Contract Deploy", tx, { tags });
+        await renderEvent("Contract Deploy", tx, { tags });
         continue;
       }
 
@@ -298,55 +317,46 @@ provider.on("block", async (blockNumber) => {
         state.stats.whaleCount++;
         tags += `<span class="badge whale">🦈 Whale</span>`;
         playAlert(600, "square");
-        await renderEvent("🦈 Whale Transfer", tx, { tags });
+        await renderEvent("Whale Transfer", tx, { tags });
       } else if (val >= CONFIG.MID_THRESHOLD && val < CONFIG.WHALE_THRESHOLD && filters.mid) {
         state.stats.totalVolume += val;
         state.stats.midCount++;
         tags += `<span class="badge mid">🐟 Mid</span>`;
-        await renderEvent("🐟 Mid Transfer", tx, { tags });
+        await renderEvent("Mid Transfer", tx, { tags });
       } else if (val > 0 && val < CONFIG.MID_THRESHOLD && filters.small) {
         state.stats.totalVolume += val;
         state.stats.smallCount++;
         tags += `<span class="badge small">🪙 Small</span>`;
-        await renderEvent("🪙 Small Transfer", tx, { tags });
+        await renderEvent("Small Transfer", tx, { tags });
       }
 
       if (gasPrice > CONFIG.GAS_SPIKE_THRESHOLD && filters.gas) {
         state.stats.gasCount++;
         tags += `<span class="badge gas">🔥 ${gasPrice.toFixed(1)} Gwei</span>`;
         playAlert(200, "sawtooth");
-        await renderEvent("🔥 Gas Bomb", tx, { tags });
+        await renderEvent("Gas Spike", tx, { tags });
       }
 
       if (filters.dex && knownRouters[to]) {
         state.stats.dexCount++;
         state.stats.dexVolume += val;
-        const direction = val > 0 ? "buy" : "sell";
         tags += `<span class="badge dex">💱 ${knownRouters[to]}</span>`;
-        tags += `<span class="badge ${direction}">${direction === "buy" ? "🟢 BUY" : "🔴 SELL"}</span>`;
-        await renderEvent("💱 DEX Trade", tx, { tags });
+        await renderEvent("DEX Trade", tx, { tags });
       }
-    }
 
-    statsUpdate();
+      statsUpdate();
+    }
   } catch (err) {
     document.getElementById("connectionStatus").innerHTML = '<span class="text-red-500">●</span> ERROR';
     console.error(err);
   }
 });
 
-// Restore user settings
+// Restore settings
 const saved = JSON.parse(localStorage.getItem("vaultleakx-settings") || "{}");
 if ('soundAlerts' in saved) soundAlerts.checked = saved.soundAlerts;
 if ('autoScroll' in saved) autoScroll.checked = saved.autoScroll;
 if ('darkMode' in saved) darkMode.checked = saved.darkMode;
-
-// Apply dark mode immediately
-if (darkMode.checked) {
-  document.body.classList.add("dark");
-} else {
-  document.body.classList.remove("dark");
-}
 
 // Watch for setting changes
 document.querySelectorAll("input[type=checkbox]").forEach(cb => {
@@ -357,16 +367,7 @@ document.querySelectorAll("input[type=checkbox]").forEach(cb => {
       darkMode: darkMode.checked
     };
     localStorage.setItem("vaultleakx-settings", JSON.stringify(newSettings));
-    if (cb.id === "darkMode") {
-      document.body.classList.toggle("dark", cb.checked);
-    }
   });
-});
-
-    // Sidebar toggle logic for mobile
-document.getElementById("toggleSidebar").addEventListener("click", () => {
-  const sidebar = document.getElementById("sidebarPanel");
-  sidebar.classList.toggle("-translate-x-full");
 });
 </script>
 </body>
