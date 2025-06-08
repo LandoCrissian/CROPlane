@@ -113,7 +113,7 @@
   <!-- Main View -->
   <div class="flex flex-1 overflow-hidden">
     <!-- Sidebar -->
-    <aside class="w-64 bg-[#111827] p-4 space-y-4 border-r border-gray-800 overflow-y-auto hidden md:block">
+    <aside id="sidebarPanel" class="w-64 bg-[#111827] p-4 space-y-4 border-r border-gray-800 overflow-y-auto fixed top-0 left-0 h-screen z-50 transform -translate-x-full transition-transform md:translate-x-0 md:static md:block">
       <div class="space-y-3">
         <div class="flex justify-between items-center">
           <h2 class="text-lime-300 font-semibold text-sm">Transaction Filters</h2>
@@ -152,6 +152,13 @@
       <div id="feed" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
     </main>
   </div>
+</div>
+
+  <!-- Mobile Sidebar Toggle -->
+<div class="md:hidden flex justify-end mt-2">
+  <button id="toggleSidebar" class="text-lime-400 border border-lime-400 px-3 py-1 rounded-md text-xs">
+    ☰ Filters / Settings
+  </button>
 </div>
 
   <script>
@@ -354,6 +361,12 @@ document.querySelectorAll("input[type=checkbox]").forEach(cb => {
       document.body.classList.toggle("dark", cb.checked);
     }
   });
+});
+
+    // Sidebar toggle logic for mobile
+document.getElementById("toggleSidebar").addEventListener("click", () => {
+  const sidebar = document.getElementById("sidebarPanel");
+  sidebar.classList.toggle("-translate-x-full");
 });
 </script>
 </body>
