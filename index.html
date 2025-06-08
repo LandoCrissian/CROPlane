@@ -192,7 +192,7 @@ const getTokenLogo = (addr) =>
   `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${addr}/logo.png`;
 
 const playAlert = (hz, type) => {
-  if (!soundAlerts.checked) return;
+  if (!soundAlerts?.checked) return;
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -218,9 +218,7 @@ const renderEvent = async (label, tx, { tags }) => {
       if (res.ok) {
         tokenLogo = `<img src="${logoUrl}" alt="logo" class="token-logo" onerror="this.remove()">`;
       }
-    } catch (e) {
-      // fallback silently fails
-    }
+    } catch (e) {}
   }
 
   el.innerHTML = `
@@ -230,13 +228,13 @@ const renderEvent = async (label, tx, { tags }) => {
     </div>
     <div class="text-sm mt-2 break-all">
       From: <span class="text-white">${formatAddr(tx.from)}</span><br/>
-      To: <span class="text-white">${formatAddr(tx.to || "")}</span> ${tokenLogo}
-      <br/>Value: <span class="text-white">${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</span>
+      To: <span class="text-white">${formatAddr(tx.to || "")}</span> ${tokenLogo}<br/>
+      Value: <span class="text-white">${parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2)} CRO</span>
     </div>
     <div class="mt-2 flex flex-wrap gap-2">${tags}</div>
   `;
   feed.prepend(el);
-  if (autoScroll.checked) feed.scrollTop = 0;
+  if (autoScroll?.checked) feed.scrollTop = 0;
   if (feed.childElementCount > CONFIG.MAX_EVENTS) feed.removeChild(feed.lastChild);
 };
 
@@ -259,12 +257,12 @@ provider.on("block", async (blockNumber) => {
   document.getElementById("blockNumber").textContent = blockNumber;
 
   const filters = {
-    deploys: deploys.checked,
-    whales: whales.checked,
-    mid: mid.checked,
-    small: small.checked,
-    gas: gas.checked,
-    dex: dex.checked
+    deploys: deploys?.checked,
+    whales: whales?.checked,
+    mid: mid?.checked,
+    small: small?.checked,
+    gas: gas?.checked,
+    dex: dex?.checked
   };
 
   try {
@@ -285,7 +283,10 @@ provider.on("block", async (blockNumber) => {
         tags += `<span class="badge deploy">🚀 Deploy</span>`;
         playAlert(400, "triangle");
         await renderEvent("🚀 Contract Deploy", tx, { tags });
-      } else if (val >= CONFIG.WHALE_THRESHOLD && filters.whales) {
+        continue;
+      }
+
+      if (val >= CONFIG.WHALE_THRESHOLD && filters.whales) {
         state.stats.totalVolume += val;
         state.stats.whaleCount++;
         tags += `<span class="badge whale">🦈 Whale</span>`;
@@ -327,25 +328,33 @@ provider.on("block", async (blockNumber) => {
   }
 });
 
-// Load Settings
+// Restore user settings
 const saved = JSON.parse(localStorage.getItem("vaultleakx-settings") || "{}");
-if (saved.soundAlerts === false) soundAlerts.checked = false;
-if (saved.autoScroll === false) autoScroll.checked = false;
-if (saved.darkMode === false) darkMode.checked = false;
+if ('soundAlerts' in saved) soundAlerts.checked = saved.soundAlerts;
+if ('autoScroll' in saved) autoScroll.checked = saved.autoScroll;
+if ('darkMode' in saved) darkMode.checked = saved.darkMode;
 
-// Save Settings
-document.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+// Apply dark mode immediately
+if (darkMode.checked) {
+  document.body.classList.add("dark");
+} else {
+  document.body.classList.remove("dark");
+}
+
+// Watch for setting changes
+document.querySelectorAll("input[type=checkbox]").forEach(cb => {
   cb.addEventListener("change", () => {
-    localStorage.setItem(
-      "vaultleakx-settings",
-      JSON.stringify({
-        soundAlerts: soundAlerts.checked,
-        autoScroll: autoScroll.checked,
-        darkMode: darkMode.checked
-      })
-    );
+    const newSettings = {
+      soundAlerts: soundAlerts.checked,
+      autoScroll: autoScroll.checked,
+      darkMode: darkMode.checked
+    };
+    localStorage.setItem("vaultleakx-settings", JSON.stringify(newSettings));
+    if (cb.id === "darkMode") {
+      document.body.classList.toggle("dark", cb.checked);
+    }
   });
 });
 </script>
-  </body>
+</body>
 </html>
