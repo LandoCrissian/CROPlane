@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
 </head>
 <body class="bg-[#0b0f14] text-white font-['Inter']">
-  <!-- Bottom Settings Panel (Mobile) -->
+  <!-- Settings Panel -->
   <div id="settingsPanel" class="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-gray-800 p-4 transform translate-y-full transition-transform duration-300 z-50 rounded-t-xl md:hidden">
     <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-4"></div>
     <div class="space-y-4">
@@ -129,17 +129,33 @@
   .badge.sell { @apply bg-red-500/20 text-red-400; }
 
   .token-logo {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: inline-block;
     vertical-align: middle;
     margin-right: 4px;
     background: rgba(255,255,255,0.1);
   }
+
+  .token-info {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin: 4px 0;
+  }
 </style>
 
 <script>
+// Token ABI for name and symbol
+const TOKEN_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)"
+];
+
 const CONFIG = {
   MAX_EVENTS: 100,
   WHALE_THRESHOLD: 1000,
@@ -153,6 +169,9 @@ const knownRouters = {
   "0x22ccb916b6f66d823eeab45f36cdde4fbb9a35ca": "MM Finance",
   "0x5c4af5a3102641cf4c7322a1d8e7896b3aea1d3c": "CorgiSwap"
 };
+
+// Cache for token info
+const tokenInfoCache = new Map();
 
 let settingsPanelVisible = false;
 const provider = new ethers.providers.JsonRpcProvider("https://evm.cronos.org");
@@ -176,7 +195,7 @@ settingsPanel.addEventListener("touchstart", (e) => {
 settingsPanel.addEventListener("touchmove", (e) => {
   touchMoveY = e.touches[0].clientY;
   const delta = touchMoveY - touchStartY;
-  if (delta > 0) { // Only allow dragging down
+  if (delta > 0) {
     settingsPanel.style.transform = `translateY(${delta}px)`;
     e.preventDefault();
   }
@@ -184,7 +203,7 @@ settingsPanel.addEventListener("touchmove", (e) => {
 
 settingsPanel.addEventListener("touchend", () => {
   const delta = touchMoveY - touchStartY;
-  if (delta > 70) { // If dragged down more than 70px, close the panel
+  if (delta > 70) {
     settingsPanel.style.transform = "translateY(100%)";
     settingsPanelVisible = false;
   } else {
@@ -208,15 +227,50 @@ const state = {
 
 const formatAddr = (addr) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-const getTokenLogo = async (addr) => {
+// Enhanced token info fetching
+async function getTokenInfo(address) {
+  if (!address) return null;
+  if (tokenInfoCache.has(address)) {
+    return tokenInfoCache.get(address);
+  }
+
   try {
-    const res = await fetch(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${addr}/logo.png`);
-    if (res.ok) {
-      return res.url;
-    }
-  } catch (e) {}
+    const contract = new ethers.Contract(address, TOKEN_ABI, provider);
+    const [name, symbol] = await Promise.all([
+      contract.name().catch(() => null),
+      contract.symbol().catch(() => null)
+    ]);
+
+    if (!name || !symbol) return null;
+
+    const info = { name, symbol };
+    tokenInfoCache.set(address, info);
+    return info;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Enhanced token logo fetching
+async function getTokenLogo(address) {
+  if (!address) return null;
+  
+  const logoUrls = [
+    `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${address}/logo.png`,
+    `https://cronos.org/tokens/${address}/logo.png`,
+    `https://swap.crodex.app/images/tokens/${address}.png`
+  ];
+
+  for (const url of logoUrls) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        return url;
+      }
+    } catch (e) {}
+  }
   return null;
-};
+}
 
 const playAlert = (hz, type) => {
   if (!soundAlerts?.checked) return;
@@ -237,11 +291,32 @@ const renderEvent = async (label, tx, { tags }) => {
   const el = document.createElement("div");
   el.className = "event";
 
+  let tokenInfo = null;
   let tokenLogo = "";
+  let tokenDisplay = "";
+
   if (tx.to) {
-    const logoUrl = await getTokenLogo(tx.to);
+    // Fetch token info and logo in parallel
+    const [info, logoUrl] = await Promise.all([
+      getTokenInfo(tx.to),
+      getTokenLogo(tx.to)
+    ]);
+
+    if (info) {
+      tokenInfo = info;
+    }
+
     if (logoUrl) {
       tokenLogo = `<img src="${logoUrl}" alt="token" class="token-logo" onerror="this.style.display='none'">`;
+    }
+
+    if (tokenInfo) {
+      tokenDisplay = `
+        <div class="token-info">
+          ${tokenLogo}
+          <span class="text-xs font-medium">${tokenInfo.symbol}</span>
+          <span class="text-xs text-gray-400 ml-1">${tokenInfo.name}</span>
+        </div>`;
     }
   }
 
@@ -251,10 +326,11 @@ const renderEvent = async (label, tx, { tags }) => {
   el.innerHTML = `
     <div class="text-xs flex items-center justify-between">
       <div class="font-semibold text-lime-400 flex items-center">
-        ${tokenLogo}${label}
+        ${label}
       </div>
       <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-emerald-400 hover:underline">View ↗</a>
     </div>
+    ${tokenDisplay}
     <div class="text-xs mt-2">
       <div class="flex justify-between">
         <span>From: <span class="text-white">${formatAddr(tx.from)}</span></span>
