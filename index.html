@@ -213,9 +213,13 @@ const renderEvent = async (label, tx, { tags }) => {
   let tokenLogo = "";
   if (tx.to) {
     const logoUrl = getTokenLogo(tx.to);
-    const res = await fetch(logoUrl);
-    if (res.ok) {
-      tokenLogo = `<img src="${logoUrl}" alt="logo" class="token-logo" onerror="this.remove()">`;
+    try {
+      const res = await fetch(logoUrl);
+      if (res.ok) {
+        tokenLogo = `<img src="${logoUrl}" alt="logo" class="token-logo" onerror="this.remove()">`;
+      }
+    } catch (e) {
+      // fallback silently fails
     }
   }
 
