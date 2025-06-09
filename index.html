@@ -9,6 +9,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
 </head>
 <body class="bg-[#0b0f14] text-white font-['Inter']">
+  <!-- Watchlist Modal -->
+  <div id="watchlistModal" class="fixed inset-0 bg-black/80 z-50 hidden">
+    <div class="bg-[#111827] rounded-t-xl absolute bottom-0 left-0 right-0 p-4">
+      <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-4"></div>
+      <h2 class="text-lime-300 font-semibold mb-4">Token Watchlist</h2>
+      <div class="space-y-4">
+        <div class="flex gap-2">
+          <input type="text" id="tokenAddress" placeholder="Token Address" class="flex-1 bg-black/30 border border-gray-700 rounded px-3 py-2 text-sm">
+          <button onclick="addToWatchlist(document.getElementById('tokenAddress').value)" class="bg-lime-500 text-black px-4 rounded text-sm font-semibold">Add</button>
+        </div>
+        <div id="watchlist" class="space-y-2 max-h-[300px] overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Panel -->
   <div id="settingsPanel" class="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-gray-800 p-4 transform translate-y-full transition-transform duration-300 z-50 rounded-t-xl md:hidden">
     <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-4"></div>
@@ -26,6 +41,10 @@
         <label class="flex items-center space-x-2 text-sm">
           <input type="checkbox" id="darkMode" checked>
           <span>Dark Mode</span>
+        </label>
+        <label class="flex items-center space-x-2 text-sm">
+          <input type="checkbox" id="priceAlerts" checked>
+          <span>Price Alerts</span>
         </label>
       </div>
       <div class="filter-group mt-4">
@@ -53,7 +72,10 @@
             <div class="absolute -top-1 -right-2 w-2 h-2 bg-lime-400 rounded-full animate-ping"></div>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+          <button id="toggleWatchlist" class="text-lime-400 text-sm">
+            👁️
+          </button>
           <button id="toggleSettings" class="text-lime-400 text-sm">
             ⚙️
           </button>
@@ -67,7 +89,7 @@
         <div id="connectionStatus" class="stats-pill whitespace-nowrap"><span class="animate-pulse text-lime-500">●</span> LIVE</div>
       </div>
 
-      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+      <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
         <div class="stat-card">
           <div class="text-gray-400">24h Vol</div>
           <div class="text-sm font-bold text-white" id="totalVolume">0 CRO</div>
@@ -76,7 +98,14 @@
           <div class="text-gray-400">Gas</div>
           <div class="text-sm font-bold text-white" id="avgGas">0</div>
         </div>
+        <div class="stat-card">
+          <div class="text-gray-400">Watched</div>
+          <div class="text-sm font-bold text-white" id="watchedCount">0</div>
+        </div>
       </div>
+
+      <!-- Watchlist Summary -->
+      <div id="watchlistSummary" class="mt-2 flex gap-2 overflow-x-auto pb-2 scrollbar-hide"></div>
     </header>
 
     <!-- Feed Viewer -->
@@ -127,6 +156,7 @@
   .badge.dex { @apply bg-purple-500/20 text-purple-400; }
   .badge.buy { @apply bg-green-500/20 text-green-400; }
   .badge.sell { @apply bg-red-500/20 text-red-400; }
+  .badge.watched { @apply bg-blue-500/20 text-blue-400; }
 
   .token-logo {
     width: 20px;
@@ -146,21 +176,37 @@
     border-radius: 12px;
     margin: 4px 0;
   }
+
+  .watchlist-item {
+    @apply flex items-center justify-between p-3 bg-black/30 rounded-lg border border-gray-800/50;
+  }
+
+  .price-change-up { @apply text-green-400; }
+  .price-change-down { @apply text-red-400; }
 </style>
 
 <script>
-// Token ABI for name and symbol
+// Token Cache and Info Management
+const tokenInfoCache = new Map();
+const formatAddr = (addr) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
+// Token ABI
 const TOKEN_ABI = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)"
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)"
 ];
 
 const CONFIG = {
   MAX_EVENTS: 100,
   WHALE_THRESHOLD: 1000,
   MID_THRESHOLD: 100,
-  GAS_SPIKE_THRESHOLD: 100
+  GAS_SPIKE_THRESHOLD: 100,
+  PRICE_UPDATE_INTERVAL: 30000,
+  ALERT_THRESHOLD: 5
 };
 
 const knownRouters = {
@@ -170,49 +216,10 @@ const knownRouters = {
   "0x5c4af5a3102641cf4c7322a1d8e7896b3aea1d3c": "CorgiSwap"
 };
 
-// Cache for token info
-const tokenInfoCache = new Map();
-
-let settingsPanelVisible = false;
-const provider = new ethers.providers.JsonRpcProvider("https://evm.cronos.org");
-const feed = document.getElementById("feed");
-const txCount = document.getElementById("txCount");
-const settingsPanel = document.getElementById("settingsPanel");
-
-document.getElementById("toggleSettings").addEventListener("click", () => {
-  settingsPanelVisible = !settingsPanelVisible;
-  settingsPanel.style.transform = settingsPanelVisible ? "translateY(0)" : "translateY(100%)";
-});
-
-// Touch handling for settings panel
-let touchStartY = 0;
-let touchMoveY = 0;
-
-settingsPanel.addEventListener("touchstart", (e) => {
-  touchStartY = e.touches[0].clientY;
-});
-
-settingsPanel.addEventListener("touchmove", (e) => {
-  touchMoveY = e.touches[0].clientY;
-  const delta = touchMoveY - touchStartY;
-  if (delta > 0) {
-    settingsPanel.style.transform = `translateY(${delta}px)`;
-    e.preventDefault();
-  }
-});
-
-settingsPanel.addEventListener("touchend", () => {
-  const delta = touchMoveY - touchStartY;
-  if (delta > 70) {
-    settingsPanel.style.transform = "translateY(100%)";
-    settingsPanelVisible = false;
-  } else {
-    settingsPanel.style.transform = "translateY(0)";
-  }
-});
-
 const state = {
   gasHistory: [],
+  watchlist: new Map(),
+  tokenPrices: new Map(),
   stats: {
     totalVolume: 0,
     whaleCount: 0,
@@ -225,9 +232,11 @@ const state = {
   }
 };
 
-const formatAddr = (addr) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+const provider = new ethers.providers.JsonRpcProvider("https://evm.cronos.org");
+const feed = document.getElementById("feed");
+const txCount = document.getElementById("txCount");
 
-// Enhanced token info fetching
+// Token Info Functions
 async function getTokenInfo(address) {
   if (!address) return null;
   if (tokenInfoCache.has(address)) {
@@ -251,71 +260,22 @@ async function getTokenInfo(address) {
   }
 }
 
-// Enhanced token logo fetching
-async function getTokenLogo(address) {
-  if (!address) return null;
-  
-  const logoUrls = [
-    `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${address}/logo.png`,
-    `https://cronos.org/tokens/${address}/logo.png`,
-    `https://swap.crodex.app/images/tokens/${address}.png`
-  ];
-
-  for (const url of logoUrls) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) {
-        return url;
-      }
-    } catch (e) {}
-  }
-  return null;
-}
-
-const playAlert = (hz, type) => {
-  if (!soundAlerts?.checked) return;
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.value = hz;
-  gain.gain.value = 0.1;
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.start();
-  gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
-  osc.stop(ctx.currentTime + 0.5);
-};
-
-const renderEvent = async (label, tx, { tags }) => {
+// Event Rendering
+async function renderEvent(label, tx, { tags }) {
   const el = document.createElement("div");
   el.className = "event";
 
   let tokenInfo = null;
-  let tokenLogo = "";
   let tokenDisplay = "";
 
   if (tx.to) {
-    // Fetch token info and logo in parallel
-    const [info, logoUrl] = await Promise.all([
-      getTokenInfo(tx.to),
-      getTokenLogo(tx.to)
-    ]);
-
+    const info = await getTokenInfo(tx.to);
     if (info) {
       tokenInfo = info;
-    }
-
-    if (logoUrl) {
-      tokenLogo = `<img src="${logoUrl}" alt="token" class="token-logo" onerror="this.style.display='none'">`;
-    }
-
-    if (tokenInfo) {
       tokenDisplay = `
         <div class="token-info">
-          ${tokenLogo}
-          <span class="text-xs font-medium">${tokenInfo.symbol}</span>
-          <span class="text-xs text-gray-400 ml-1">${tokenInfo.name}</span>
+          <span class="text-xs font-medium">${info.symbol}</span>
+          <span class="text-xs text-gray-400 ml-1">${info.name}</span>
         </div>`;
     }
   }
@@ -347,18 +307,112 @@ const renderEvent = async (label, tx, { tags }) => {
   if (feed.childElementCount > CONFIG.MAX_EVENTS) {
     feed.removeChild(feed.lastChild);
   }
-};
+}
 
-const statsUpdate = () => {
-  document.getElementById("totalVolume").textContent = `${state.stats.totalVolume.toFixed(2)} CRO`;
-  document.getElementById("avgGas").textContent = (
-    state.gasHistory.reduce((a, b) => a + b, 0) / state.gasHistory.length || 0
-  ).toFixed(1);
-};
+// Watchlist Management
+function loadWatchlist() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("vaultleakx-watchlist") || "[]");
+    saved.forEach(address => addToWatchlist(address, false));
+  } catch (e) {
+    console.error("Error loading watchlist:", e);
+  }
+}
 
-provider.on("block", async (blockNumber) => {
-  document.getElementById("blockNumber").textContent = blockNumber;
+function saveWatchlist() {
+  localStorage.setItem("vaultleakx-watchlist", 
+    JSON.stringify(Array.from(state.watchlist.keys()))
+  );
+}
 
+async function addToWatchlist(address, save = true) {
+  if (!address || !ethers.utils.isAddress(address)) {
+    alert("Invalid address");
+    return;
+  }
+
+  address = address.toLowerCase();
+  if (state.watchlist.has(address)) return;
+
+  try {
+    const contract = new ethers.Contract(address, TOKEN_ABI, provider);
+    const [name, symbol] = await Promise.all([
+      contract.name(),
+      contract.symbol()
+    ]);
+
+    state.watchlist.set(address, {
+      name,
+      symbol,
+      contract,
+      price: 0,
+      priceChange: 0,
+      lastUpdate: Date.now()
+    });
+
+    if (save) {
+      saveWatchlist();
+      document.getElementById("tokenAddress").value = "";
+    }
+
+    updateWatchlistUI();
+    setupTokenWatcher(address);
+  } catch (e) {
+    alert("Error adding token: " + e.message);
+  }
+}
+
+function removeFromWatchlist(address) {
+  state.watchlist.delete(address);
+  saveWatchlist();
+  updateWatchlistUI();
+}
+
+// UI Updates
+function updateWatchlistUI() {
+  const watchlist = document.getElementById("watchlist");
+  const summary = document.getElementById("watchlistSummary");
+  document.getElementById("watchedCount").textContent = state.watchlist.size;
+
+  watchlist.innerHTML = "";
+  summary.innerHTML = "";
+
+  for (const [address, token] of state.watchlist) {
+    const item = document.createElement("div");
+    item.className = "watchlist-item";
+    item.innerHTML = `
+      <div>
+        <div class="font-semibold">${token.symbol}</div>
+        <div class="text-xs text-gray-400">${token.name}</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <div class="font-semibold ${token.priceChange >= 0 ? 'price-change-up' : 'price-change-down'}">
+            $${token.price.toFixed(6)}
+          </div>
+          <div class="text-xs ${token.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}">
+            ${token.priceChange > 0 ? '+' : ''}${token.priceChange.toFixed(2)}%
+          </div>
+        </div>
+        <button onclick="removeFromWatchlist('${address}')" class="text-red-400">✕</button>
+      </div>
+    `;
+    watchlist.appendChild(item);
+
+    const pill = document.createElement("div");
+    pill.className = "stats-pill flex items-center gap-2";
+    pill.innerHTML = `
+      <span class="font-semibold">${token.symbol}</span>
+      <span class="${token.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}">
+        $${token.price.toFixed(6)}
+      </span>
+    `;
+    summary.appendChild(pill);
+  }
+}
+
+// Transaction Processing
+function processTx(tx) {
   const filters = {
     deploys: deploys?.checked,
     whales: whales?.checked,
@@ -368,83 +422,237 @@ provider.on("block", async (blockNumber) => {
     dex: dex?.checked
   };
 
+  const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
+  const gasPrice = parseFloat(ethers.utils.formatUnits(tx.gasPrice, "gwei") || 0);
+  const to = tx.to?.toLowerCase();
+  let tags = "";
+
+  state.gasHistory.push(gasPrice);
+  if (state.gasHistory.length > 100) state.gasHistory.shift();
+  
+  // Update transaction count
+  const txCountEl = document.getElementById("txCount");
+  txCountEl.textContent = (+txCountEl.textContent + 1).toString();
+
+  // Contract deployment
+  if (!tx.to && filters.deploys) {
+    state.stats.deployCount++;
+    tags += `<span class="badge deploy">🚀 Deploy</span>`;
+    playAlert(400, "triangle");
+    renderEvent("Contract Deploy", tx, { tags });
+    return;
+  }
+
+  // Transaction categorization
+  if (val >= CONFIG.WHALE_THRESHOLD && filters.whales) {
+    state.stats.totalVolume += val;
+    state.stats.whaleCount++;
+    tags += `<span class="badge whale">🦈 Whale</span>`;
+    playAlert(600, "square");
+    renderEvent("Whale Transfer", tx, { tags });
+  } else if (val >= CONFIG.MID_THRESHOLD && val < CONFIG.WHALE_THRESHOLD && filters.mid) {
+    state.stats.totalVolume += val;
+    state.stats.midCount++;
+    tags += `<span class="badge mid">🐟 Mid</span>`;
+    renderEvent("Mid Transfer", tx, { tags });
+  } else if (val > 0 && val < CONFIG.MID_THRESHOLD && filters.small) {
+    state.stats.totalVolume += val;
+    state.stats.smallCount++;
+    tags += `<span class="badge small">🪙 Small</span>`;
+    renderEvent("Small Transfer", tx, { tags });
+  }
+
+  // Gas price monitoring
+  if (gasPrice > CONFIG.GAS_SPIKE_THRESHOLD && filters.gas) {
+    state.stats.gasCount++;
+    tags += `<span class="badge gas">🔥 ${gasPrice.toFixed(1)} Gwei</span>`;
+    playAlert(200, "sawtooth");
+    renderEvent("Gas Spike", tx, { tags });
+  }
+
+  // DEX interaction
+  if (filters.dex && knownRouters[to]) {
+    state.stats.dexCount++;
+    state.stats.dexVolume += val;
+    tags += `<span class="badge dex">💱 ${knownRouters[to]}</span>`;
+    renderEvent("DEX Trade", tx, { tags });
+  }
+
+  // Update statistics display
+  document.getElementById("totalVolume").textContent = `${state.stats.totalVolume.toFixed(2)} CRO`;
+  document.getElementById("avgGas").textContent = (
+    state.gasHistory.reduce((a, b) => a + b, 0) / state.gasHistory.length || 0
+  ).toFixed(1);
+}
+
+// Price Updates
+async function updateTokenPrice(address) {
   try {
-    const block = await provider.getBlockWithTransactions(blockNumber);
-    for (const tx of block.transactions) {
-      const val = parseFloat(ethers.utils.formatEther(tx.value || 0));
-      const gasPrice = parseFloat(ethers.utils.formatUnits(tx.gasPrice, "gwei") || 0);
-      const to = tx.to?.toLowerCase() || "";
-      let tags = "";
+    const token = state.watchlist.get(address);
+    if (!token) return;
 
-      state.gasHistory.push(gasPrice);
-      if (state.gasHistory.length > 100) state.gasHistory.shift();
-      txCount.textContent = (+txCount.textContent + 1).toString();
+    const router = new ethers.Contract(
+      "0x145677fc4d9b8f19b5d56d1820c48e0443049a30",
+      ["function getAmountsOut(uint256,address[]) view returns (uint256[])"],
+      provider
+    );
 
-      if (!tx.to && filters.deploys) {
-        state.stats.deployCount++;
-        tags += `<span class="badge deploy">🚀 Deploy</span>`;
-        playAlert(400, "triangle");
-        await renderEvent("Contract Deploy", tx, { tags });
-        continue;
-      }
-
-      if (val >= CONFIG.WHALE_THRESHOLD && filters.whales) {
-        state.stats.totalVolume += val;
-        state.stats.whaleCount++;
-        tags += `<span class="badge whale">🦈 Whale</span>`;
-        playAlert(600, "square");
-        await renderEvent("Whale Transfer", tx, { tags });
-      } else if (val >= CONFIG.MID_THRESHOLD && val < CONFIG.WHALE_THRESHOLD && filters.mid) {
-        state.stats.totalVolume += val;
-        state.stats.midCount++;
-        tags += `<span class="badge mid">🐟 Mid</span>`;
-        await renderEvent("Mid Transfer", tx, { tags });
-      } else if (val > 0 && val < CONFIG.MID_THRESHOLD && filters.small) {
-        state.stats.totalVolume += val;
-        state.stats.smallCount++;
-        tags += `<span class="badge small">🪙 Small</span>`;
-        await renderEvent("Small Transfer", tx, { tags });
-      }
-
-      if (gasPrice > CONFIG.GAS_SPIKE_THRESHOLD && filters.gas) {
-        state.stats.gasCount++;
-        tags += `<span class="badge gas">🔥 ${gasPrice.toFixed(1)} Gwei</span>`;
-        playAlert(200, "sawtooth");
-        await renderEvent("Gas Spike", tx, { tags });
-      }
-
-      if (filters.dex && knownRouters[to]) {
-        state.stats.dexCount++;
-        state.stats.dexVolume += val;
-        tags += `<span class="badge dex">💱 ${knownRouters[to]}</span>`;
-        await renderEvent("DEX Trade", tx, { tags });
-      }
-
-      statsUpdate();
+    const amount = ethers.utils.parseEther("1");
+    const path = [address, "0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23"];
+    
+    const amounts = await router.getAmountsOut(amount, path).catch(() => null);
+    if (amounts) {
+      const newPrice = parseFloat(ethers.utils.formatEther(amounts[1]));
+      const oldPrice = token.price;
+      token.priceChange = oldPrice ? ((newPrice - oldPrice) / oldPrice) * 100 : 0;
+      token.price = newPrice;
+      token.lastUpdate = Date.now();
+      updateWatchlistUI();
     }
-  } catch (err) {
-    document.getElementById("connectionStatus").innerHTML = '<span class="text-red-500">●</span> ERROR';
-    console.error(err);
+  } catch (e) {
+    console.error("Error updating price:", e);
+  }
+}
+
+function setupTokenWatcher(address) {
+  const token = state.watchlist.get(address);
+  if (!token) return;
+
+  token.contract.on("Transfer", async (from, to, value) => {
+    if (priceAlerts?.checked) {
+      const oldPrice = token.price;
+      await updateTokenPrice(address);
+      const newPrice = token.price;
+      const change = ((newPrice - oldPrice) / oldPrice) * 100;
+
+      if (Math.abs(change) >= CONFIG.ALERT_THRESHOLD) {
+        playAlert(800, "sine");
+        showNotification(`${token.symbol} ${change > 0 ? '📈' : '📉'} ${change.toFixed(2)}%`);
+      }
+    }
+  });
+
+  updateTokenPrice(address);
+  setInterval(() => updateTokenPrice(address), CONFIG.PRICE_UPDATE_INTERVAL);
+}
+
+// Sound Alerts
+const playAlert = (hz, type) => {
+  if (!soundAlerts?.checked) return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = hz;
+  gain.gain.value = 0.1;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+  osc.stop(ctx.currentTime + 0.5);
+};
+
+// Notifications
+function showNotification(message) {
+  if (!("Notification" in window)) return;
+  
+  if (Notification.permission === "granted") {
+    new Notification("VaultLeakX Pro", { body: message });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        new Notification("VaultLeakX Pro", { body: message });
+      }
+    });
+  }
+}
+
+// Event Listeners
+document.getElementById("toggleSettings").addEventListener("click", () => {
+  const panel = document.getElementById("settingsPanel");
+  panel.style.transform = panel.style.transform === "translateY(0px)" ? "translateY(100%)" : "translateY(0px)";
+});
+
+document.getElementById("toggleWatchlist").addEventListener("click", () => {
+  const modal = document.getElementById("watchlistModal");
+  modal.style.display = modal.style.display === "block" ? "none" : "block";
+});
+
+// Touch Handling
+let touchStartY = 0;
+const settingsPanel = document.getElementById("settingsPanel");
+
+document.getElementById("watchlistModal").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("watchlistModal")) {
+    document.getElementById("watchlistModal").style.display = "none";
   }
 });
 
-// Restore settings
-const saved = JSON.parse(localStorage.getItem("vaultleakx-settings") || "{}");
-if ('soundAlerts' in saved) soundAlerts.checked = saved.soundAlerts;
-if ('autoScroll' in saved) autoScroll.checked = saved.autoScroll;
-if ('darkMode' in saved) darkMode.checked = saved.darkMode;
+settingsPanel.addEventListener("touchstart", (e) => {
+  touchStartY = e.touches[0].clientY;
+});
 
-// Watch for setting changes
+settingsPanel.addEventListener("touchmove", (e) => {
+  const delta = e.touches[0].clientY - touchStartY;
+  if (delta > 0) {
+    settingsPanel.style.transform = `translateY(${delta}px)`;
+    e.preventDefault();
+  }
+});
+
+settingsPanel.addEventListener("touchend", (e) => {
+  const delta = e.touches[0].clientY - touchStartY;
+  settingsPanel.style.transform = delta > 70 ? "translateY(100%)" : "translateY(0px)";
+});
+
+// Block Monitoring
+provider.on("block", async (blockNumber) => {
+  document.getElementById("blockNumber").textContent = blockNumber;
+  
+  try {
+    const block = await provider.getBlockWithTransactions(blockNumber);
+    
+    for (const tx of block.transactions) {
+      const to = tx.to?.toLowerCase();
+      if (!to) continue;
+
+      // Check if transaction involves watched token
+      if (state.watchlist.has(to)) {
+        const token = state.watchlist.get(to);
+        const tags = `<span class="badge watched">👁️ Watched ${token.symbol}</span>`;
+        await renderEvent("Watched Token", tx, { tags });
+        playAlert(600, "sine");
+      }
+
+      // Process regular transaction monitoring
+      processTx(tx);
+    }
+  } catch (err) {
+    console.error("Block processing error:", err);
+    document.getElementById("connectionStatus").innerHTML = 
+      '<span class="text-red-500">●</span> ERROR';
+  }
+});
+
+// Settings Management
+const settings = JSON.parse(localStorage.getItem("vaultleakx-settings") || "{}");
+Object.entries(settings).forEach(([key, value]) => {
+  const el = document.getElementById(key);
+  if (el) el.checked = value;
+});
+
 document.querySelectorAll("input[type=checkbox]").forEach(cb => {
   cb.addEventListener("change", () => {
-    const newSettings = {
-      soundAlerts: soundAlerts.checked,
-      autoScroll: autoScroll.checked,
-      darkMode: darkMode.checked
-    };
+    const newSettings = {};
+    document.querySelectorAll("input[type=checkbox]").forEach(input => {
+      newSettings[input.id] = input.checked;
+    });
     localStorage.setItem("vaultleakx-settings", JSON.stringify(newSettings));
   });
 });
+
+// Initialize
+loadWatchlist();
 </script>
 </body>
 </html>
