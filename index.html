@@ -293,7 +293,7 @@ tokenDisplay = `
   }
 
   const value = parseFloat(ethers.utils.formatEther(tx.value)).toFixed(2);
-  const isBuy = tx.value.gt(0);
+  const isBuy = ethers.BigNumber.from(tx.value || 0).gt(0);
 
   el.innerHTML = `
     <div class="text-xs flex items-center justify-between">
@@ -629,8 +629,8 @@ provider.on("block", async (blockNumber) => {
     const block = await provider.getBlockWithTransactions(blockNumber);
     
     for (const tx of block.transactions) {
-      const to = tx.to?.toLowerCase();
-      if (!to) continue;
+      const toAddress = tx.to ? tx.to.toLowerCase() : null;
+if (!toAddress) return; // skip invalid tx
 
       // Check if transaction involves watched token
       if (state.watchlist.has(to)) {
