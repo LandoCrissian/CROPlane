@@ -272,11 +272,13 @@ async function renderEvent(label, tx, { tags }) {
     const info = await getTokenInfo(tx.to);
     if (info) {
       tokenInfo = info;
-      tokenDisplay = `
-        <div class="token-info">
-          <span class="text-xs font-medium">${info.symbol}</span>
-          <span class="text-xs text-gray-400 ml-1">${info.name}</span>
-        </div>`;
+      const logoURL = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${tx.to}/logo.png`;
+tokenDisplay = `
+  <div class="token-info">
+    <img src="${logoURL}" onerror="this.style.display='none'" class="token-logo" />
+    <span class="text-xs font-medium">${info.symbol}</span>
+    <span class="text-xs text-gray-400 ml-1">${info.name}</span>
+  </div>`;
     }
   }
 
@@ -285,7 +287,10 @@ async function renderEvent(label, tx, { tags }) {
 
   el.innerHTML = `
     <div class="text-xs flex items-center justify-between">
-      <div class="font-semibold text-lime-400 flex items-center">
+      <div class="flex items-center gap-2">
+  <img src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${address}/logo.png" onerror="this.style.display='none'" class="token-logo" />
+  <div class="font-semibold">${token.symbol}</div>
+</div>
         ${label}
       </div>
       <a href="https://cronoscan.com/tx/${tx.hash}" target="_blank" class="text-emerald-400 hover:underline">View ↗</a>
@@ -402,10 +407,12 @@ function updateWatchlistUI() {
     const pill = document.createElement("div");
     pill.className = "stats-pill flex items-center gap-2";
     pill.innerHTML = `
-      <span class="font-semibold">${token.symbol}</span>
-      <span class="${token.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}">
-        $${token.price.toFixed(6)}
-      </span>
+  <img src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cronos/assets/${address}/logo.png" onerror="this.style.display='none'" class="token-logo" />
+  <span class="font-semibold">${token.symbol}</span>
+  <span class="${token.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}">
+    $${token.price.toFixed(6)}
+  </span>
+`;
     `;
     summary.appendChild(pill);
   }
