@@ -235,6 +235,16 @@ const state = {
 const provider = new ethers.providers.JsonRpcProvider("https://evm.cronos.org");
 const feed = document.getElementById("feed");
 const txCount = document.getElementById("txCount");
+// Grab checkbox references globally so they're accessible
+const deploys = document.getElementById("deploys");
+const whales = document.getElementById("whales");
+const mid = document.getElementById("mid");
+const small = document.getElementById("small");
+const gas = document.getElementById("gas");
+const dex = document.getElementById("dex");
+const autoScroll = document.getElementById("autoScroll");
+const soundAlerts = document.getElementById("soundAlerts");
+const priceAlerts = document.getElementById("priceAlerts");
 
 // Token Info Functions
 async function getTokenInfo(address) {
@@ -413,7 +423,6 @@ function updateWatchlistUI() {
     $${token.price.toFixed(6)}
   </span>
 `;
-    `;
     summary.appendChild(pill);
   }
 }
